@@ -1,0 +1,4 @@
+{"v":1,"w":1920,"h":1080,"background":false,"cmds":[
+ {"t":"rect","x":10,"y":20,"w":300,"h":120,"fill":"#14171cd9","r":12},
+ {"t":"text","x":24,"y":40,"s":"openHUD","size":22,"font":"bold","color":"#ffffff","base":"mid"}
+]}

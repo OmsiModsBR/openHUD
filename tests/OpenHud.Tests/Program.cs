@@ -7,6 +7,10 @@ internal static class Program
     private static int Main()
     {
         Gates.Run("module.skeleton-loads", SkeletonGate);
+        CoreGates.Register();
+        PauseGates.Register();
+        DrawGates.Register();
+        AuxiGates.Register();
         Console.WriteLine(Gates.Failures == 0 ? "all gates passed" : Gates.Failures + " gate(s) failed");
         return Gates.Failures == 0 ? 0 : 1;
     }

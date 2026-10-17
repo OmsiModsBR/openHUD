@@ -1,0 +1,5 @@
+{"v":1,"w":1920,"h":1080,"background":true,"cmds":[
+ {"t":"rect","x":0,"y":0,"w":1920,"h":1080,"fill":"#000000a6"},
+ {"t":"rect","x":760,"y":420,"w":400,"h":56,"fill":"#00c94a","r":10},
+ {"t":"text","x":960,"y":448,"s":"Resume","size":18,"font":"bold","color":"#ffffff","align":"c","base":"mid"}
+]}

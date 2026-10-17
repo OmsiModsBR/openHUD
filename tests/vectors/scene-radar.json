@@ -1,0 +1,10 @@
+{"v":1,"w":1920,"h":1080,"background":false,"cmds":[
+ {"t":"circle","cx":1700,"cy":880,"r":160,"fill":"#0b151ee6","stroke":"#ffffff","sw":4},
+ {"t":"clip","kind":"circle","cx":1700,"cy":880,"r":156},
+ {"t":"push","tx":1700,"ty":880,"rot":-35},
+ {"t":"poly","pts":[-60,-120,60,-120,60,120,-60,120],"stroke":"#5588c7","sw":6,"closed":false},
+ {"t":"pop"},
+ {"t":"unclip"},
+ {"t":"arc","cx":1700,"cy":880,"r":158,"a0":-40,"a1":40,"color":"#00c94a","sw":5,"cap":"round"},
+ {"t":"image","id":"player","x":1684,"y":864,"w":32,"h":32}
+]}

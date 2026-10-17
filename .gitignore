@@ -1,0 +1,17 @@
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.vs/
+x64/
+Win32/
+Release/
+Debug/
+*.pdb
+*.ilk
+*.obj
+*.tlog
+*.log
+__pycache__/
+*.pyc

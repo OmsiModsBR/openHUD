@@ -1,0 +1,20 @@
+openHUD (runtime module "openhud")
+Copyright (c) 2026 Leo Monteiro / Portal OmsiModsBR - https://github.com/OmsiModsBR
+
+This module is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License, version 3, as published by the
+Free Software Foundation (see GPL-3.0.txt).
+
+This module is not part of OmsiLaunch. It uses OmsiLaunch, which is licensed
+under the GNU Lesser General Public License, version 3 only (LGPL-3.0-only):
+
+- openhud-draw.dll is compiled with the OmsiLaunch native module header
+  (omsilaunch_module_native_v1.h);
+- OpenHud.dll uses the OmsiLaunch.Runtime.Modules and OmsiLaunch.Api
+  assemblies, which OmsiLaunch itself provides at run time (they are not
+  included here);
+- OpenHud.Host.exe is started by OmsiLaunch as a session program.
+
+Copies of the LGPL-3.0 and of the GPL-3.0 it supplements are in LGPL-3.0.txt
+and GPL-3.0.txt. The OmsiLaunch source code is
+available at https://github.com/lmonteirotech/OmsiLaunch.

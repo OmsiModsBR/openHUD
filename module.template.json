@@ -1,0 +1,28 @@
+{
+  "schema": "omsilaunch.runtime-module/v1",
+  "id": "openhud",
+  "version": "0.1.0",
+  "name": "openHUD",
+  "bridge_protocol": { "min": 3, "max": 3 },
+  "activation": "requested",
+  "required_capabilities": ["bridge.events", "bridge.runtime", "bridge.tick", "bridge.hooks.d3d9", "bridge.input"],
+  "optional_capabilities": ["ui.pause-menu.replace", "camera.read", "timetable.read", "weather.read"],
+  "runtime_operations": [
+    "time.read", "map.read", "map.tiles.list", "camera.read", "player-vehicle.read",
+    "road-vehicles.list", "road-vehicle.read", "timetable.read", "weather.read",
+    "ui.pause.state", "ui.pause.take-over", "ui.pause.restore-native", "ui.pause.action"
+  ],
+  "tick_ms": 50,
+  "content_inputs": [ { "kind": "realmap-package", "required": false } ],
+  "components": [
+    { "kind": "managed", "path": "OpenHud.dll", "sha256": "", "entry": "OpenHud.HudModule" },
+    { "kind": "native", "path": "openhud-draw.dll", "sha256": "" }
+  ],
+  "settings": [
+    { "key": "radar", "type": "boolean", "default": true, "description": "Draws the round radar (minimap) over the game view." },
+    { "key": "pause_menu", "type": "boolean", "default": true, "description": "Replaces OMSI's pause menu with openHUD's where the build allows it; otherwise the native menu stays." },
+    { "key": "ui_scale_percent", "type": "integer", "default": 100, "min": 50, "max": 200, "description": "Scale of openHUD's interface, in percent." },
+    { "key": "language", "type": "text", "default": "auto", "max_length": 8, "description": "Interface language: auto follows OMSI's language." }
+  ],
+  "failure_policy": "degrade"
+}

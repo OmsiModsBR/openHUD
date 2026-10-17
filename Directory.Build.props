@@ -1,0 +1,15 @@
+<Project>
+  <!-- The OmsiLaunch checkout the module builds against (contracts, native module header). -->
+  <PropertyGroup>
+    <OmsiLaunchRoot Condition="'$(OmsiLaunchRoot)' == ''">$(MSBuildThisFileDirectory)..\OmsiLaunch-spec-pack\OmsiLaunch\</OmsiLaunchRoot>
+    <ArtifactsRoot>$(MSBuildThisFileDirectory)artifacts\</ArtifactsRoot>
+  </PropertyGroup>
+  <!-- .NET projects build outside the source tree (C++ projects set OutDir/IntDir themselves). -->
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <BaseOutputPath>$(ArtifactsRoot)bin\$(MSBuildProjectName)\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(ArtifactsRoot)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <Company>Leo Monteiro / Portal OmsiModsBR</Company>
+    <Copyright>© 2026 Leo Monteiro / Portal OmsiModsBR - https://github.com/OmsiModsBR</Copyright>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The optional session program (x64, outside OMSI): voice for the stop
+       announcements. OmsiLaunch starts it with the session and ends it with it. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>OpenHud.Host</AssemblyName>
+    <RootNamespace>OpenHud.Host</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OpenHud.Core\OpenHud.Core.csproj" />
+    <InternalsVisibleTo Include="OpenHud.Tests" />
+  </ItemGroup>
+</Project>

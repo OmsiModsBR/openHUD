@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>OpenHud.Tests</AssemblyName>
+    <RootNamespace>OpenHud.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\OpenHud.Core\OpenHud.Core.csproj" />
+    <ProjectReference Include="..\..\src\OpenHud.Pause\OpenHud.Pause.csproj" />
+    <ProjectReference Include="..\..\src\OpenHud.Module\OpenHud.Module.csproj" />
+    <ProjectReference Include="..\..\src\OpenHud.Host\OpenHud.Host.csproj" />
+    <ProjectReference Include="$(OmsiLaunchRoot)src\OmsiLaunch.Runtime.Modules\OmsiLaunch.Runtime.Modules.csproj" />
+    <ProjectReference Include="$(OmsiLaunchRoot)src\OmsiLaunch.Api\OmsiLaunch.Api.csproj" />
+  </ItemGroup>
+</Project>

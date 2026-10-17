@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The pause menu's state machine. It talks to the game through small ports
+       (interfaces) so it runs against a fake in the tests. -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>OpenHud.Pause</AssemblyName>
+    <RootNamespace>OpenHud.Pause</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OpenHud.Core\OpenHud.Core.csproj" />
+    <InternalsVisibleTo Include="OpenHud.Tests" />
+  </ItemGroup>
+</Project>

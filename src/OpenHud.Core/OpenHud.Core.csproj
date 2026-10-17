@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- openHUD's model: no OMSI, no D3D, no OmsiLaunch dependency. Everything here
+       is plain data and logic that the tests run offline. -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>OpenHud.Core</AssemblyName>
+    <RootNamespace>OpenHud</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup><InternalsVisibleTo Include="OpenHud.Tests" /></ItemGroup>
+</Project>

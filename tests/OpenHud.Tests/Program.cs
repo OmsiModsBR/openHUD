@@ -8,6 +8,7 @@ internal static class Program
     {
         Gates.Run("module.skeleton-loads", SkeletonGate);
         CoreGates.Register();
+        SceneGates.Register();
         PauseGates.Register();
         DrawGates.Register();
         AuxiGates.Register();

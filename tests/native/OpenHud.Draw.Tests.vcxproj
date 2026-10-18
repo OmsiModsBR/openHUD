@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Offline tests of the draw layer (x86 console): parser, scene model, software rasterizer, atlas, operations, and a real Direct3D 9 device when one can be created. -->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations"><ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration></ItemGroup>
+  <PropertyGroup Label="Globals"><ProjectGuid>{C0000000-0000-0000-0000-000000000202}</ProjectGuid><Keyword>Win32Proj</Keyword><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion><RootNamespace>OpenHudDrawTests</RootNamespace></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration"><ConfigurationType>Application</ConfigurationType><UseDebugLibraries>false</UseDebugLibraries><PlatformToolset>v145</PlatformToolset><CharacterSet>Unicode</CharacterSet><WholeProgramOptimization>false</WholeProgramOptimization></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup><TargetName>OpenHud.Draw.Tests</TargetName><OutDir>$(ArtifactsRoot)bin\OpenHud.Draw.Tests\</OutDir><IntDir>$(ArtifactsRoot)obj\OpenHud.Draw.Tests\</IntDir></PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <Optimization>MaxSpeed</Optimization>
+      <PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory);$(MSBuildThisFileDirectory)..\..\src\OpenHud.Draw;$(OmsiLaunchRoot)src\OmsiLaunch.Native.x86\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link><SubSystem>Console</SubSystem><GenerateDebugInformation>true</GenerateDebugInformation><AdditionalDependencies>d3d9.lib;gdi32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <!-- The production sources under test (everything but the module exports). -->
+    <ClCompile Include="..\..\src\OpenHud.Draw\Atlas.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\D3D9Backend.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\DrawLayer.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\Fonts.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\Geometry.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\Json.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\Renderer.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\Scene.cpp" />
+    <ClCompile Include="..\..\src\OpenHud.Draw\SoftBackend.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="TestJson.cpp" />
+    <ClCompile Include="TestScene.cpp" />
+    <ClCompile Include="TestRaster.cpp" />
+    <ClCompile Include="TestLayer.cpp" />
+    <ClCompile Include="TestD3D.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Harness.h" />
+    <ClInclude Include="Kit.h" />
+    <ClInclude Include="FakeBridge.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

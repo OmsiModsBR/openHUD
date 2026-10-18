@@ -8,9 +8,33 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup><TargetName>openhud-draw</TargetName><OutDir>$(ArtifactsRoot)bin\OpenHud.Draw\</OutDir><IntDir>$(ArtifactsRoot)obj\OpenHud.Draw\</IntDir></PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile><WarningLevel>Level4</WarningLevel><TreatWarningAsError>true</TreatWarningAsError><PrecompiledHeader>NotUsing</PrecompiledHeader><ConformanceMode>true</ConformanceMode><LanguageStandard>stdcpp17</LanguageStandard><RuntimeLibrary>MultiThreaded</RuntimeLibrary><Optimization>MaxSpeed</Optimization><AdditionalIncludeDirectories>$(OmsiLaunchRoot)src\OmsiLaunch.Native.x86\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
-    <Link><SubSystem>Windows</SubSystem><GenerateDebugInformation>true</GenerateDebugInformation></Link>
+    <ClCompile><WarningLevel>Level4</WarningLevel><PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions><TreatWarningAsError>true</TreatWarningAsError><PrecompiledHeader>NotUsing</PrecompiledHeader><ConformanceMode>true</ConformanceMode><LanguageStandard>stdcpp17</LanguageStandard><RuntimeLibrary>MultiThreaded</RuntimeLibrary><Optimization>MaxSpeed</Optimization><AdditionalIncludeDirectories>$(OmsiLaunchRoot)src\OmsiLaunch.Native.x86\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
+    <Link><SubSystem>Windows</SubSystem><AdditionalDependencies>gdi32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies><GenerateDebugInformation>true</GenerateDebugInformation></Link>
   </ItemDefinitionGroup>
-  <ItemGroup><ClCompile Include="Module.cpp" /></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Atlas.cpp" />
+    <ClCompile Include="D3D9Backend.cpp" />
+    <ClCompile Include="DrawLayer.cpp" />
+    <ClCompile Include="Fonts.cpp" />
+    <ClCompile Include="Geometry.cpp" />
+    <ClCompile Include="Json.cpp" />
+    <ClCompile Include="Module.cpp" />
+    <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="SoftBackend.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Atlas.h" />
+    <ClInclude Include="Backend.h" />
+    <ClInclude Include="Base64.h" />
+    <ClInclude Include="D3D9Backend.h" />
+    <ClInclude Include="DrawLayer.h" />
+    <ClInclude Include="Fonts.h" />
+    <ClInclude Include="Geometry.h" />
+    <ClInclude Include="Json.h" />
+    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Scene.h" />
+    <ClInclude Include="SoftBackend.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

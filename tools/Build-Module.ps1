@@ -55,6 +55,10 @@ function Write-Manifest([string]$Template, [string]$Directory) {
 $msbuild = Find-MSBuild
 
 Invoke-Step 'openhud: draw layer (x86)' { & $msbuild (Join-Path $root 'src\OpenHud.Draw\OpenHud.Draw.vcxproj') -p:Configuration=Release -p:Platform=Win32 -nologo -v:minimal @extra }
+if (-not $SkipTests) {
+    Invoke-Step 'openhud: draw layer tests (x86)' { & $msbuild (Join-Path $root 'tests\native\OpenHud.Draw.Tests.vcxproj') -p:Configuration=Release -p:Platform=Win32 -nologo -v:minimal @extra }
+    Invoke-Step 'openhud: draw layer tests: run' { & (Join-Path $artifacts 'bin\OpenHud.Draw.Tests\OpenHud.Draw.Tests.exe') --vectors (Join-Path $root 'tests\vectors') }
+}
 Invoke-Step 'openhud: managed component' { dotnet build (Join-Path $root 'src\OpenHud.Module\OpenHud.Module.csproj') -c Release -nologo -v:minimal @extra }
 $module = Join-Path $artifacts 'modules\openhud'
 if (Test-Path $module) { Remove-Item -LiteralPath $module -Recurse -Force }

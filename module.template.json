@@ -22,7 +22,12 @@
     { "key": "radar", "type": "boolean", "default": true, "description": "Draws the round radar (minimap) over the game view." },
     { "key": "pause_menu", "type": "boolean", "default": true, "description": "Replaces OMSI's pause menu with openHUD's where the build allows it; otherwise the native menu stays." },
     { "key": "ui_scale_percent", "type": "integer", "default": 100, "min": 50, "max": 200, "description": "Scale of openHUD's interface, in percent." },
-    { "key": "language", "type": "text", "default": "auto", "max_length": 8, "description": "Interface language: auto follows OMSI's language." }
+    { "key": "language", "type": "text", "default": "auto", "max_length": 8, "description": "Interface language: auto follows OMSI's language." },
+    { "key": "units", "type": "choice", "choices": ["metric", "imperial"], "default": "metric", "description": "Units for speed and distance on the radar." },
+    { "key": "radar_zoom", "type": "choice", "choices": ["near", "medium", "far"], "default": "medium", "description": "How much of the surroundings the radar shows." },
+    { "key": "radar_corner", "type": "choice", "choices": ["top-left", "top-right", "bottom-left", "bottom-right"], "default": "bottom-left", "description": "Screen corner where the radar sits." },
+    { "key": "radar_size_percent", "type": "integer", "default": 100, "min": 50, "max": 200, "description": "Size of the radar, in percent." },
+    { "key": "radar_opacity_percent", "type": "integer", "default": 90, "min": 20, "max": 100, "description": "Opacity of the radar, in percent." }
   ],
   "failure_policy": "degrade"
 }

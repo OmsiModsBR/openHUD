@@ -1,5 +1,7 @@
 # openHUD Documentation
 
+English | [Português (Brasil)](pt-BR/README.md)
+
 This is the English documentation for openHUD `0.1.0` (module id `openhud`), the in-game HUD and pause-menu module for OMSI 2, an OmsiLaunch runtime module. Every page describes what the current code does; when a page and the code disagree, the code wins and the page is a bug. The pages mirror the structure of the OmsiLaunch documentation: getting started, concepts, guides, reference and status.
 
 The module is a runtime module of OmsiLaunch with bridge protocol 3. OmsiLaunch's own documentation (its Runtime Modules reference, CLI reference and session-profile reference) is the normative source for everything the module relies on from OmsiLaunch: where modules live, integrity, activation, `/module-setting`, `modules.ini`, presets. These pages link to it by name and repeat only what a user of this module needs.

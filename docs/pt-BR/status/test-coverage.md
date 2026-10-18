@@ -1,0 +1,64 @@
+# Cobertura de testes
+
+<!-- l10n: source=status/test-coverage.md source-sha256=88a4e873dbe6333f9e8211550ece266802ae977cdf416c9fa47aa6175b10d2b5 -->
+> Tradução da [página original em inglês](../../status/test-coverage.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
+
+Esta página lista o que os testes offline do openHUD `0.1.0` cobrem, por nome de gate e por grupo, e o que eles não cobrem. Os testes nunca iniciam o OMSI. Os gates gerenciados ficam em `tests/OpenHud.Tests` (um programa de console, código de saída 0 quando todos os gates passam); os nativos ficam em `tests/native` (um programa de console C++ que o gate gerenciado `draw.native-tests-pass` executa). Quando esta página e os testes divergem, os testes valem e a página tem um bug.
+
+Páginas relacionadas: [status de validação](validation.md), [limitações conhecidas](../reference/known-limitations.md), [as três partes](../concepts/the-three-parts.md).
+
+<a id="how-to-run-them"></a>
+## Como executá-los
+
+```text
+powershell -File tools\Build-Module.ps1 -OmsiLaunchRoot C:\src\OmsiLaunch
+```
+
+constrói a camada de desenho, constrói e executa os testes nativos, constrói o componente gerenciado, monta a pasta do módulo e executa os gates gerenciados. Os gates nativos `draw.native-*` falham com "the native tests are not built" se o programa de testes nativos não foi construído antes. Cada gate imprime `PASS` ou `FAIL` com o seu nome.
+
+<a id="managed-gates-by-group"></a>
+## Gates gerenciados por grupo
+
+| Grupo | Gates | O que provam |
+| --- | --- | --- |
+| Configurações e textos da interface | `settings.defaults`, `settings.valid-values`, `settings.bad-values-fall-back-and-are-reported`, `settings.hostile-dictionary`, `settings.template-agrees-with-parser` | Toda configuração é interpretada; um valor ruim vira o padrão mais um problema informado; nada lança exceção; o parser concorda com `module.template.json` |
+| | `i18n.every-key-in-every-language`, `i18n.required-concepts-exist`, `i18n.language-resolution`, `i18n.suffixed-keys`, `i18n.format-and-unknown-key` | Toda chave tem os três idiomas com os mesmos placeholders; as regras de idioma e de código do pacote; `<key>.<LANG>` e depois `<key>`; uma chave desconhecida mostra a si mesma |
+| Pacote de menu de pausa | `pausepkg.generic-defaults-without-package`, `pausepkg.manifest-rules`, `pausepkg.full-package`, `pausepkg.language-suffixed-resolution` | Os padrões genéricos; o que faz um pacote valer; a leitura de um pacote completo; a ordem de busca dos textos |
+| | `pausepkg.path-safety`, `pausepkg.links-cannot-escape`, `pausepkg.size-limits`, `pausepkg.picture-validation`, `pausepkg.hostile-text`, `pausepkg.fonts`, `pausepkg.strings-folder`, `pausepkg.fingerprint-is-a-cache-key`, `pausepkg.identity-is-immutable` | Caminhos e links inseguros são recusados; os limites se mantêm; verificações de PNG e SVG; caracteres de controle; as regras de fonte (licença, papéis, substituição); a pasta `strings`; a impressão digital muda com os arquivos; o resultado é imutável |
+| Pacote realmap | `realmap.manifest`, `realmap.manifest-rejections`, `realmap.source-port`, `realmap.chunk-addressing-and-detail`, `realmap.whole-map-lines-not-repeated`, `realmap.simplification`, `realmap.street-lookup`, `realmap.regions`, `realmap.markers-and-icons`, `realmap.transit-lines`, `realmap.query-bounds` | O manifesto e suas rejeições; a localização pela porta; chunks, níveis de detalhe, simplificação; buscas de ruas e regiões; marcadores; linhas e datas; consultas limitadas |
+| | `realmap.corrupt-surface-header`, `realmap.corrupt-chunks-degrade-per-chunk`, `realmap.bad-values-dropped-per-primitive`, `realmap.layers-degrade-independently`, `realmap.truncation-at-every-length`, `realmap.random-corruption-never-throws` | Um arquivo corrompido custa um chunk ou uma camada, nunca o leitor; todo comprimento de truncamento e toda corrupção aleatória são superados |
+| Modelo do jogo | `model.angles-and-quaternion-heading`, `model.radar-projection-properties`, `model.snapshot-from-synthetic-drive`, `model.replay-follows-the-drive-across-tiles`, `model.replay-reader` | Rumos e projeção; um percurso sintético produz os snapshots esperados entre tiles |
+| | `model.paged-lists`, `model.list-cursor-loops-are-cut`, `model.vehicle-read-budget`, `model.slow-parts-refresh-rarely`, `model.map-change-resets-learned-state`, `model.no-player-vehicle`, `model.failure-per-part`, `model.failure-kinds`, `model.stale-vehicle-handles`, `model.unknown-tile-is-flagged`, `model.timetable-logs-option`, `model.fuzzed-replies-never-throw` | Paginação, o orçamento de leitura e as taxas de atualização; uma troca de mapa reinicia o estado; cada tipo de falha custa apenas a sua parte; respostas fuzzed nunca lançam exceção |
+| Cena | `scene.golden-vectors-roundtrip`, `scene.golden-vectors-built-by-builder`, `scene.encoder-*`, `scene.limit-*`, `scene.balance-refused`, `scene.color-syntax`, `scene.field-validation`, `scene.decoder-rejects-garbage`, `scene.ops-payloads`, `scene.ops-refusals`, `scene.text-measurer`, `scene.draw-helpers` | O codec de cena contra os documentos golden; codificação exata; limites; clipes e transformações desbalanceados são recusados; lixo é rejeitado; os payloads das operações |
+| Radar e mapa | `radar.small-scene-structure`, `radar.projection-north-up`, `radar.projection-heading-up`, `radar.zoom-steps`, `radar.compass-follows-mode`, `radar.culling-and-clipping`, `radar.vehicles-nearest-capped`, `radar.markers-capped`, `radar.info-strip`, `radar.theme-validated` | A estrutura do radar, as duas orientações, os seis passos de zoom, o culling, os tetos e a faixa |
+| | `radar.lod-dense-map-under-cap`, `radar.lod-keeps-important-layers`, `radar.lod-point-budget`, `radar.hostile-input-never-throws`, `radar.hostile-options`, `radar.deterministic`, `radar.golden-file`, `radar.performance-20000-features`, `map.full-structure`, `map.full-viewport`, `map.full-line-list-overflow`, `map.full-dense-and-hostile` | Mapas densos ficam abaixo dos orçamentos de comandos e de pontos e mantêm as camadas importantes; entrada hostil; a mesma entrada dá a mesma cena; o mapa completo |
+| Máquina de estados da pausa | `pause.machine.running-idle`, `open-and-resume`, `key-release-wait`, `key-release-timeout-stuck-key`, `modal-actions-roundtrip`, `modal-outcomes`, `quit`, `busy-never-draws`, `external-resume`, `take-over-retry-in-frame` | Os estados e as transições de [o menu de pausa](../concepts/the-pause-menu.md), incluindo a espera pela liberação das teclas e a nova tentativa no frame |
+| | `pause.machine.provisional`, `capability-unresolved-latches`, `failure-sweep-every-call-every-error`, `persistent-restore-failure`, `stop-from-every-state`, `stop-idempotent`, `cycles-1000`, `single-thread`, `port-exceptions`, `error-catalog-mapping` | Toda chamada falhando com todo erro termina no estado provisório ou em Running; a parada funciona a partir de todo estado e se repete; 1.000 ciclos não deixam nada retido; regra de uma única thread; exceções das portas |
+| Modelo do menu de pausa | `pause.menu.keyboard-table`, `ignored-input`, `map-keys`, `lines-keys`, `mouse-hover-focus`, `mouse-press-release`, `mouse-tabs`, `mouse-drag-map`, `wheel`, `double-click`, `reset-and-transient`, `hit-test-table`, `hostile-input` | Toda regra de teclado e de mouse dos [controles](../reference/controls.md) |
+| Leiaute da pausa e forma da cena | `pause.layout.scale-table`, `input-normalization`, `draw-invariants`, `stable-order`, `regions-and-pages`, `lines-clip-and-scrollbar`, `pause.identity.defaults-and-fallbacks`, `pause.identity.no-literals`, `pause.i18n.keys-and-fallback`, `pause.scene-json.golden`, `hostile`, `protocol-grammar`, `vector-files`, `pause.input-mirror.matches-bridge` | O tamanho do menu em todas as escalas; tudo fica dentro do canvas; ordem estável; nenhum literal por mapa no menu; o JSON de cena contra a gramática do protocolo; o espelho dos eventos de entrada é igual ao do bridge |
+| Camada de desenho (nativa, executada pelo programa gerenciado) | `draw.native-tests-pass`, `draw.native-no-unexpected-skips`, `draw.native-json`, `draw.native-scene`, `draw.native-raster`, `draw.native-atlas`, `draw.native-layer`, `draw.native-d3d9` | O programa nativo passa, nada é pulado exceto os testes Direct3D por falta de dispositivo, e cada grupo foi executado |
+| Integração com um bridge simulado | `module.session-*`, `module.pause-*`, `module.fuzz-*`, `module.stop-at-every-phase`, `module.degradation-*`, `module.settings-garbage-uses-defaults`, `module.operations-of-the-module`, `module.tick-budget-20000-features`, `module.no-growth-over-10000-ticks`, `module.manifest-*` | O módulo ligado a um simulado do bridge do OmsiLaunch: sessões completas (percurso com radar, throttle, realmap chegando à cena, fontes e símbolo do pacote, rotação para o norte, canto/tamanho/opacidade/idioma, apenas as operações declaradas são lidas), percursos de pausa e toda falha do catálogo, da entrada e da camada de desenho, parada em todas as fases, degradação sem camada de desenho ou com pacotes hostis, as quatro operações, o orçamento do tick, nenhum crescimento ao longo de 10.000 ticks, e o manifesto (golden, configurações, o pacote montado) |
+| Documentação | `docs.pause-example-reads-clean`, `docs.pause-template-reads-clean`, `docs.pause-example-values`, `docs.realmap-example-reads-clean`, `docs.rejected-entries-match-the-readers`, `docs.settings-reference-covers-the-template`, `docs.settings-examples-are-accepted`, `docs.ui-language-keys-match-the-table`, `docs.command-lines-use-known-flags`, `docs.no-unfinished-markers` | Os pacotes de exemplo impressos nos guias são reconstruídos a partir do texto da página e lidos com os leitores reais sem nenhuma entrada rejeitada; as linhas de log das tabelas são as dos próprios leitores; todo exemplo de configuração passa pelo parser real de configurações; as tabelas de configurações e de textos da interface coincidem com o código; as linhas de comando usam flags que o OmsiLaunch tem |
+| Esqueleto | `module.skeleton-loads` | A entrada implementa `IRuntimeModule` |
+
+<a id="native-gates-testsnative"></a>
+## Gates nativos (`tests/native`)
+
+| Grupo | Testes | O que provam |
+| --- | --- | --- |
+| `json.` | `basic`, `numbers`, `strings`, `invalid-utf8`, `structure`, `limits`, `base64`, `stress-random-garbage`, `stress-mutated-vectors` | O parser JSON: limites, UTF-8, números; lixo e documentos mutados nunca causam falha |
+| `scene.` | `vector-minimal`, `vector-pause`, `vector-radar`, `empty-documents`, `refusals`, `limits`, `unknown-and-malformed-commands`, `values` | O parser de cena lê os vetores golden compartilhados e impõe o protocolo |
+| `raster.` | `vector-minimal`, `vector-pause`, `vector-radar`, `alpha-blending`, `antialiasing`, `lines-and-widths`, `caps-butt-and-round`, `polygons`, `clipping`, `transforms`, `canvas-scaled-to-view`, `images`, `image-limits`, `text`, `text-fallbacks`, `font-registration`, `glyph-atlas-eviction`, `deterministic-and-batching`, `empty-scene-and-no-scene` | O rasterizador por software desenha corretamente as cenas golden e todos os comandos |
+| `atlas.` | `lru-order`, `lru-against-a-model` | A substituição no atlas de glifos |
+| `layer.` | `start-requirements`, `hook-requests`, `op-scene`, `output-buffer-convention`, `op-images`, `op-fonts`, `op-visible-background-stats`, `stop-makes-everything-inert`, `failure-disables-drawing-and-never-throws`, `draws-only-on-the-game-device`, mais as operações adicionadas para o módulo (`measure`, tamanho da view em `stats`) | A camada contra um bridge simulado: início, hooks, todas as operações, parada, falha, apenas o dispositivo do jogo |
+| `d3d9.` | `matches-the-software-backend`, `restores-only-what-it-changes`, `inside-the-games-own-scene`, `default-pool-is-released-for-reset`, `layer-through-the-present-and-reset-hooks` | O backend Direct3D 9 contra um dispositivo real quando é possível criar um: mesma imagem que o backend por software, estado restaurado, reset tratado. Estes são pulados, dizendo isso, quando nenhum dispositivo pode ser criado |
+
+<a id="what-the-tests-do-not-cover"></a>
+## O que os testes não cobrem
+
+- Qualquer coisa em um OMSI em execução: o menu de pausa nativo real, a captura de entrada real, os hooks Direct3D no dispositivo do jogo, as unidades e posições que o jogo informa ([status de validação](validation.md)).
+- A aparência do texto em uma fonte real em uma máquina real, além das verificações golden do backend por software.
+- A qualidade das traduções.
+- A prosa: os gates de documentação verificam exemplos, tabelas e links (`tools\Check-Docs.ps1`), não se uma frase está certa.
+
+Relacionadas: [status de validação](validation.md) · [limitações conhecidas](../reference/known-limitations.md)

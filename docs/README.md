@@ -84,4 +84,4 @@ Vocabulary used throughout: the module is built and covered by offline tests; it
 
 ## License
 
-Copyright © 2026 Leo Monteiro / Portal OmsiModsBR. openHUD is free software under the GNU General Public License, version 3; it uses OmsiLaunch, which is licensed under the GNU Lesser General Public License, version 3 only. See the repository `LICENSE` and `NOTICE.txt`.
+Copyright © 2026 LMonteiro - github.com/lmonteirotech and OmsiModsBR Team - github.com/OmsiModsBR. openHUD is free software under the GNU General Public License, version 3; it uses OmsiLaunch, which is licensed under the GNU Lesser General Public License, version 3 only. See the repository `LICENSE` and `NOTICE.txt`.

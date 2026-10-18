@@ -9,7 +9,7 @@
     <BaseOutputPath>$(ArtifactsRoot)bin\$(MSBuildProjectName)\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(ArtifactsRoot)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
-    <Company>Leo Monteiro / Portal OmsiModsBR</Company>
-    <Copyright>© 2026 Leo Monteiro / Portal OmsiModsBR - https://github.com/OmsiModsBR</Copyright>
+    <Company>LMonteiro and OmsiModsBR Team</Company>
+    <Copyright>© 2026 LMonteiro - github.com/lmonteirotech and OmsiModsBR Team - github.com/OmsiModsBR</Copyright>
   </PropertyGroup>
 </Project>

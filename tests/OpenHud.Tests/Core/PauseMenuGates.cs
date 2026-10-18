@@ -103,10 +103,10 @@ internal static class PauseMenuGates
         dir.Write("identity.cfg",
             "format = 1\n" +
             "title = Test Map Menu\ntitle.ENG = Test Map Menu (EN)\ntitle.PTB = Menu do Mapa Teste\n" +
-            "symbol = symbols/mark.png\nsymbol.green = @brt\nsymbol.dark = symbols/dark.svg\nsymbol.openomsi = symbols/open.png\n" +
+            "symbol = symbols/mark.png\nsymbol.green = @simple\nsymbol.dark = symbols/dark.svg\nsymbol.openomsi = symbols/open.png\n" +
             "theme = Green\nlayout = openhud\n" +
             "color.line = #5588C7\ncolor.brt = #1e7b34\ncolor.accent = #24589a80\ncolor.group.exp = #aa0000\n" +
-            "stop_icon = @rmtc\nmarker_icon.station = @brt\nmarker_icon.garage = symbols/mark.png\nmode_icon.tram = @simple\nmode_icon.hovercraft = @simple\n" +
+            "stop_icon = @omsi2\nmarker_icon.station = @simple\nmarker_icon.garage = symbols/mark.png\nmode_icon.tram = @simple\nmode_icon.hovercraft = @simple\n" +
             "legend.station = Station text\nlegend.station.ENG = Station (EN)\nlegend.station.PTB = Estacao\n" +
             "some_future_key = 1\n");
         dir.Write("symbols/mark.png", Synthetic.Png(64, 64));
@@ -135,8 +135,8 @@ internal static class PauseMenuGates
         Expect.Equal(SymbolKind.Picture, id.Symbol.Kind, "symbol is a picture");
         Expect.True(id.Symbol.Format == PictureFormat.Png && id.Symbol.Width == 64 && id.Symbol.Height == 64, "png dimensions come from the header");
         Expect.True(id.Symbol.FilePath is not null && File.Exists(id.Symbol.FilePath) && id.Symbol.FilePath2x is not null && id.Symbol.FilePath2x.EndsWith("mark@2x.png"), "@2x sibling found");
-        Expect.True(id.ThemeSymbols["green"].Name == "brt" && id.ThemeSymbols["dark"].Format == PictureFormat.Svg, "theme symbols");
-        Expect.Equal("brt", id.SymbolFor("green", PauseLayout.Classic).Name, "classic layout uses the theme symbol");
+        Expect.True(id.ThemeSymbols["green"].Name == "simple" && id.ThemeSymbols["dark"].Format == PictureFormat.Svg, "theme symbols");
+        Expect.Equal("simple", id.SymbolFor("green", PauseLayout.Classic).Name, "classic layout uses the theme symbol");
         Expect.Equal("symbols/open.png", id.SymbolFor("green", PauseLayout.OpenHud).Name, "openHUD layout uses symbol.openomsi");
         Expect.Equal("symbols/mark.png", id.SymbolFor("unknown-theme", PauseLayout.Classic).Name, "unknown theme falls back to symbol");
         Expect.Equal("green", id.Theme, "theme is normalised to lower case");
@@ -144,7 +144,7 @@ internal static class PauseMenuGates
         Expect.True(id.LineColor == new HudColor(0x55, 0x88, 0xC7) && id.BrtColor == new HudColor(0x1e, 0x7b, 0x34) && id.AccentColor == new HudColor(0x24, 0x58, 0x9a, 0x80), "colours");
         Expect.Equal("#24589a80", id.AccentColor!.Value.ToHex(), "colour round trip");
         Expect.True(id.GroupColors["exp"] == new HudColor(0xaa, 0, 0), "group colour");
-        Expect.True(id.StopIcon.Name == "rmtc" && id.MarkerIcons["station"].Name == "brt" && id.MarkerIcons["garage"].IsPicture && id.ModeIcons["tram"].Name == "simple", "icons");
+        Expect.True(id.StopIcon.Name == "omsi2" && id.MarkerIcons["station"].Name == "simple" && id.MarkerIcons["garage"].IsPicture && id.ModeIcons["tram"].Name == "simple", "icons");
         Expect.True(!id.ModeIcons.ContainsKey("hovercraft"), "unknown mode ignored");
         Expect.Equal("symbols/omsi2-logo.png", id.Omsi2Mark.Name, "OMSI 2 logo comes from the package file");
         Expect.Equal("symbols/openomsi.png", id.OpenOmsiMark.Name, "openomsi mark");

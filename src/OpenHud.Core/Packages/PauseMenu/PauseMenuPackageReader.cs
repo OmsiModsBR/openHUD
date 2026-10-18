@@ -19,7 +19,7 @@ public static class PauseMenuPackageReader
     public const int MaxStringFiles = 32;
     public const int MaxStringsPerFile = 512;
 
-    private static readonly HashSet<string> InternalSymbols = new(StringComparer.Ordinal) { "omsi2", "simple", "none", "brt", "rmtc" };
+    private static readonly HashSet<string> InternalSymbols = new(StringComparer.Ordinal) { "omsi2", "simple", "none" };
     private static readonly string[] ModeNames = { "bus", "tram", "metro", "rail" };
     private static readonly Regex Token = new("^[a-z0-9_-]{1,32}$", RegexOptions.CultureInvariant);
     private static readonly Regex LangCode = new("^[A-Za-z]{3}$", RegexOptions.CultureInvariant);

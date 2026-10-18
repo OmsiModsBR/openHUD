@@ -19,7 +19,8 @@ The managed core decides **what** is drawn; the native draw layer only **rasteri
 | `background.capture` | `{}` | copies the current back buffer into the pause background texture (only while the pause menu is taken over) |
 | `background.release` | `{}` | frees the pause background texture |
 | `visible` | `{"on":true}` | `false` stops drawing at once (used on stop, on failure and while a native modal dialog is in front) |
-| `stats` | `{}` | counters: scenes drawn, commands, images, fonts, skipped frames, device resets, last error |
+| `measure` | `{"text":"Next stop","size":14,"font":"bold"}` | the width of one line of text in canvas pixels, laid out with the registered fonts the way a `text` command is (advances only, no kerning); answers `{"ok":true,"w":71.25}`. `size` is 1..512, `font` a role, `text` at most 2048 bytes. The module uses it to size chips and strips; it caches the answers |
+| `stats` | `{}` | counters: scenes drawn, commands, images, fonts, skipped frames, device resets, last error, and `view_w`/`view_h`, the size in pixels of the target of the last frame (0 before the first); the module maps the mouse of the pause menu with it |
 
 Answers are `{"ok":true,...}` or `{"ok":false,"code":"...","detail":"..."}`. An unknown operation or a malformed document never crashes OMSI: it answers `ok:false` and keeps the previous scene.
 

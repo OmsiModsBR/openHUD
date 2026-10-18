@@ -3,8 +3,11 @@
 #include "Atlas.h"
 #include "FakeBridge.h"
 
+#include <atomic>
+#include <cstdlib>
 #include <list>
 #include <map>
+#include <thread>
 
 using namespace hud;
 using namespace kit;
@@ -269,6 +272,67 @@ TEST(layer_misc_ops, "layer.op-visible-background-stats") {
     CHECK(Has(Run(s.layer, "background.release", "{}"), "\"ok\":true"));
     a = Run(s.layer, "stats", "{}");
     for (const char* key : {"scenes_drawn", "commands", "images", "fonts", "skipped_frames", "device_resets", "last_error", "unknown_cmds", "captures", "hooked"}) CHECK_MSG(Has(a, key), key);
+}
+
+namespace {
+// The "w" member of a measure answer, or -1.
+double Width(const std::string& answer) {
+    const size_t at = answer.find("\"w\":");
+    return at == std::string::npos || !Has(answer, "\"ok\":true") ? -1.0 : std::atof(answer.c_str() + at + 4);
+}
+std::string Measure(DrawLayer& layer, const std::string& text, double size, const char* font = "regular") {
+    return Run(layer, "measure", "{\"text\":\"" + text + "\",\"size\":" + std::to_string(size) + ",\"font\":\"" + font + "\"}");
+}
+} // namespace
+
+TEST(layer_measure, "layer.op-measure") {
+    Started s;
+    const double empty = Width(Measure(s.layer, "", 20));
+    CHECK(empty == 0.0);
+    const double narrow = Width(Measure(s.layer, "iiii", 20)), wide = Width(Measure(s.layer, "MMMM", 20));
+    CHECK_MSG(narrow > 0 && wide > narrow * 1.5, "iiii=" + std::to_string(narrow) + " MMMM=" + std::to_string(wide));
+    // Widths grow with the text and with the size, and keep a fraction (not whole pixels).
+    const double one = Width(Measure(s.layer, "abc", 20)), two = Width(Measure(s.layer, "abcabc", 20));
+    CHECK(std::abs(two - 2 * one) < 0.02 * two + 0.01);
+    const double big = Width(Measure(s.layer, "Hello world", 40)), little = Width(Measure(s.layer, "Hello world", 20));
+    CHECK_MSG(big > little * 1.9 && big < little * 2.1, std::to_string(big) + " vs " + std::to_string(little));
+    CHECK(Width(Measure(s.layer, "Hello", 13.5)) > 0);
+    // Every role answers; a character beyond the Basic Multilingual Plane counts as half an em.
+    for (const char* role : {"regular", "medium", "bold", "black", "condensed"}) CHECK_MSG(Width(Measure(s.layer, "Role", 18, role)) > 0, role);
+    CHECK(std::abs(Width(Run(s.layer, "measure", "{\"text\":\"" "\xF0\x9F\x98\x80" "\",\"size\":20,\"font\":\"bold\"}")) - 10.0) < 0.5);
+    // A glyph size beyond the layer's cap is measured at a littleer scale, not refused.
+    CHECK(Width(Measure(s.layer, "W", 512)) > 100);
+    // Bad arguments answer ok:false and change nothing.
+    const char* bad[] = {"{}", "{\"text\":\"a\",\"size\":20}", "{\"text\":\"a\",\"size\":20,\"font\":\"fancy\"}", "{\"text\":\"a\",\"size\":0,\"font\":\"bold\"}",
+                         "{\"text\":\"a\",\"size\":513,\"font\":\"bold\"}", "{\"text\":5,\"size\":20,\"font\":\"bold\"}", "{\"text\":\"a\",\"size\":\"20\",\"font\":\"bold\"}", "[]"};
+    for (const char* b : bad) CHECK_MSG(Has(Run(s.layer, "measure", b), "\"ok\":false"), b);
+    CHECK(Has(Run(s.layer, "measure", "{\"text\":\"" + std::string(3000, 'a') + "\",\"size\":20,\"font\":\"bold\"}"), "too_large"));
+    // The scene and the images are untouched by measuring.
+    CHECK(Has(Run(s.layer, "stats", "{}"), "\"images\":0"));
+}
+
+TEST(layer_measure_threads, "layer.op-measure-from-several-threads") {
+    Started s;
+    const double expected = Width(Measure(s.layer, "Concurrent text", 16));
+    CHECK(expected > 0);
+    std::atomic<int> wrong{0};
+    std::vector<std::thread> workers;
+    for (int t = 0; t < 4; ++t) {
+        workers.emplace_back([&]() {
+            for (int i = 0; i < 300; ++i) {
+                if (std::abs(Width(Measure(s.layer, "Concurrent text", 16)) - expected) > 1e-9) ++wrong;
+                if (Width(Measure(s.layer, "Another", 12 + (i % 5))) <= 0) ++wrong;
+            }
+        });
+    }
+    for (auto& w : workers) w.join();
+    CHECK_MSG(wrong.load() == 0, std::to_string(wrong.load()) + " wrong answers");
+}
+
+TEST(layer_stats_view, "layer.stats-reports-the-view-size") {
+    Started s;
+    const std::string a = Run(s.layer, "stats", "{}");
+    CHECK(Has(a, "\"view_w\":0") && Has(a, "\"view_h\":0"));   // no frame has begun
 }
 
 TEST(layer_stop, "layer.stop-makes-everything-inert") {

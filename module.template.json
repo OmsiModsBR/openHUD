@@ -12,6 +12,12 @@
     "road-vehicles.list", "road-vehicle.read", "timetable.read", "weather.read",
     "ui.pause.state", "ui.pause.take-over", "ui.pause.restore-native", "ui.pause.action"
   ],
+  "operations": [
+    { "id": "status", "kind": "read" },
+    { "id": "radar.zoom", "kind": "action", "arguments": [ { "name": "direction", "required": true } ] },
+    { "id": "radar.toggle", "kind": "action", "arguments": [ { "name": "visible", "required": false } ] },
+    { "id": "pause.state", "kind": "read" }
+  ],
   "tick_ms": 50,
   "content_inputs": [ { "kind": "realmap-package", "required": false } ],
   "components": [

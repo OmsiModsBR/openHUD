@@ -203,6 +203,8 @@ bool D3D9Backend::BeginFrame(int& width, int& height) {
     sceneBegun_ = SUCCEEDED(device_->BeginScene());
     viewW_ = width = static_cast<int>(desc.Width);
     viewH_ = height = static_cast<int>(desc.Height);
+    viewWidth_.store(viewW_);
+    viewHeight_.store(viewH_);
     return true;
 }
 

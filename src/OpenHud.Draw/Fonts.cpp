@@ -161,6 +161,7 @@ uint32_t FontRegistry::Generation() const {
 }
 
 struct GdiGlyphSource::Impl {
+    std::mutex lock;   // one device context: the render thread and a measure call from the module must not interleave
     HDC dc = nullptr;
     uint32_t generation = 0;
     std::unordered_map<uint64_t, HFONT> fonts;     // (kind, role, px)
@@ -231,6 +232,7 @@ GdiGlyphSource::GdiGlyphSource(FontRegistry& registry) : registry_(registry), im
 GdiGlyphSource::~GdiGlyphSource() { delete impl_; }
 
 bool GdiGlyphSource::Metrics(FontRole role, int px, FaceMetrics& out) {
+    std::lock_guard<std::mutex> guard(impl_->lock);
     if (impl_->dc == nullptr) return false;
     HFONT font = impl_->Get(registry_, role, px, 0);
     if (font == nullptr) return false;
@@ -244,6 +246,7 @@ bool GdiGlyphSource::Metrics(FontRole role, int px, FaceMetrics& out) {
 
 bool GdiGlyphSource::Glyph(FontRole role, int px, uint32_t codepoint, GlyphBitmap& out) {
     out = GlyphBitmap();
+    std::lock_guard<std::mutex> guard(impl_->lock);
     if (impl_->dc == nullptr || px < 1) return false;
     wchar_t wch;
     if (codepoint == 0 || codepoint > 0xFFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) {

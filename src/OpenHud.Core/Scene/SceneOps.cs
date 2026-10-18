@@ -34,6 +34,18 @@ public static class SceneOps
         return "{\"role\":" + Quote(role) + ",\"path\":" + Quote(absolutePath) + "}";
     }
 
+    /// <summary>Payload of `measure`: the width of one line of text in canvas pixels, laid out with the registered fonts.</summary>
+    public static string Measure(string text, double size, string font)
+    {
+        if (text is null) throw new SceneException("text missing");
+        if (text.Length > MaxMeasureLength) throw new SceneException("text longer than " + MaxMeasureLength.ToString(CultureInfo.InvariantCulture) + " characters");
+        if (!double.IsFinite(size) || size < 1 || size > 512) throw new SceneException("size outside 1..512");
+        if (Array.IndexOf(SceneValidator.FontRoles, font) < 0) throw new SceneException("unknown font role");
+        return "{\"text\":" + Quote(text) + ",\"size\":" + size.ToString("R", CultureInfo.InvariantCulture) + ",\"font\":" + Quote(font) + "}";
+    }
+
+    public const int MaxMeasureLength = 512;
+
     public static string Visible(bool on) => on ? "{\"on\":true}" : "{\"on\":false}";
 
     public static string BackgroundCapture() => "{}";

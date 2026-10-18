@@ -62,6 +62,22 @@ public static class Strings
         new("UI_RADAR_NO_DATA", "No data", "Sem dados", "Keine Daten"),
         new("UI_RADAR_UNAVAILABLE", "Unavailable", "Indisponível", "Nicht verfügbar"),
         new("UI_RADAR_NORTH", "N", "N", "N"),
+        // Map and radar legend
+        new("UI_MAP_LINES", "Lines", "Linhas", "Linien"),
+        new("UI_MAP_WATER", "Water", "Água", "Wasser"),
+        new("UI_MAP_GREEN", "Green areas", "Áreas verdes", "Grünflächen"),
+        new("UI_MAP_BUILT", "Built-up", "Área construída", "Bebaut"),
+        new("UI_MAP_ROADS", "Roads", "Vias", "Straßen"),
+        new("UI_MAP_RELIEF", "Relief", "Relevo", "Relief"),
+        new("UI_MAP_ROUTE", "Route", "Trajeto", "Strecke"),
+        new("UI_MAP_YOU", "You", "Você", "Sie"),
+        new("UI_MAP_MORE", "+{0} more", "+{0}", "+{0} weitere"),
+        // Notices shown by the tray
+        new("UI_NOTICE_TITLE", "openHUD", "openHUD", "openHUD"),
+        new("UI_NOTICE_DRAW_UNAVAILABLE", "The draw layer is not available, so openHUD shows nothing.", "A camada de desenho não está disponível; o openHUD não mostra nada.", "Die Zeichenebene ist nicht verfügbar; openHUD zeigt nichts an."),
+        new("UI_NOTICE_RADAR_OFF", "The radar was turned off after repeated errors.", "O radar foi desligado após erros repetidos.", "Das Radar wurde nach wiederholten Fehlern ausgeschaltet."),
+        new("UI_NOTICE_PAUSE_FALLBACK", "openHUD's pause menu is not available; OMSI's own menu stays.", "O menu de pausa do openHUD não está disponível; o menu do OMSI permanece.", "Das Pausenmenü von openHUD ist nicht verfügbar; das Menü von OMSI bleibt."),
+        new("UI_NOTICE_PACKAGE_IGNORED", "A map package could not be used and was ignored.", "Um pacote do mapa não pôde ser usado e foi ignorado.", "Ein Kartenpaket konnte nicht verwendet werden und wurde ignoriert."),
         // Units
         new("UI_UNIT_KMH", "km/h", "km/h", "km/h"),
         new("UI_UNIT_MPH", "mph", "mph", "mph"),

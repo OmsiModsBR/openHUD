@@ -12,6 +12,7 @@ internal static class Program
         PauseGates.Register();
         DrawGates.Register();
         AuxiGates.Register();
+        ModuleGates.Register();
         Console.WriteLine(Gates.Failures == 0 ? "all gates passed" : Gates.Failures + " gate(s) failed");
         return Gates.Failures == 0 ? 0 : 1;
     }

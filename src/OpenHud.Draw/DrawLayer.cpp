@@ -7,6 +7,8 @@
 
 #include <d3d9.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <cwctype>
@@ -49,6 +51,15 @@ constexpr size_t kMaxOperationBytes = 64 * 1024;
 constexpr size_t kMaxImageOperationBytes = 6u << 20;   // 4 MiB of pixels in base64 plus the envelope
 
 std::string Num(uint64_t v) { return std::to_string(v); }
+
+constexpr size_t kMaxMeasureBytes = 2048;
+constexpr int kMeasureOversample = 4;   // advances are taken at 4x and divided back, so widths keep their fraction
+
+std::string FormatWidth(double w) {
+    char text[40];
+    sprintf_s(text, "%.3f", w);
+    return text;
+}
 
 int Respond(const std::string& json, char* buffer, uint32_t capacity, uint32_t* length) {
     *length = static_cast<uint32_t>(json.size());
@@ -291,6 +302,8 @@ std::string DrawLayer::StatsJson() {
     out += ",\"draw_calls\":" + Num(s.drawCalls);
     out += ",\"skipped_frames\":" + Num(backend_.SkippedFrames());
     out += ",\"device_resets\":" + Num(deviceResets_.load());
+    out += ",\"view_w\":" + Num(static_cast<uint64_t>(backend_.ViewWidth()));
+    out += ",\"view_h\":" + Num(static_cast<uint64_t>(backend_.ViewHeight()));
     out += ",\"captures\":" + Num(captures_.load());
     out += ",\"capture_failures\":" + Num(captureFailures_.load());
     out += std::string(",\"visible\":") + (visible_.load() ? "true" : "false");
@@ -300,6 +313,17 @@ std::string DrawLayer::StatsJson() {
     json::AppendQuoted(out, LastError());
     out += "}";
     return out;
+}
+
+double DrawLayer::MeasureWidth(FontRole role, double size, const std::string& utf8) {
+    const double scale = std::min<double>(kMeasureOversample, 400.0 / size);   // glyph sizes are capped at 400 px
+    const int px = std::clamp(static_cast<int>(std::lround(size * scale)), 1, 400);
+    double total = 0;
+    for (const uint32_t cp : DecodeUtf8(utf8)) {
+        GlyphBitmap glyph;
+        total += glyphs_.Glyph(role, px, cp, glyph) ? glyph.advance : px * 0.5;
+    }
+    return total / scale;
 }
 
 int DrawLayer::Execute(const char* operation, const char* argumentsJson, char* buffer, uint32_t capacity, uint32_t* length) {
@@ -383,6 +407,18 @@ int DrawLayer::Execute(const char* operation, const char* argumentsJson, char* b
                 std::string error;
                 if (fonts_.Put(fontRole, widePath, error)) answer = "{\"ok\":true,\"fonts\":" + Num(static_cast<uint64_t>(fonts_.Count())) + "}";
                 else answer = ErrorJson("font_rejected", error);
+            }
+        } else if (op == "measure") {
+            std::string text, role;
+            FontRole fontRole = FontRole::Regular;
+            const json::Value* size = doc.Find("size");
+            if (!StringMember(doc, "text", text) || !StringMember(doc, "font", role) || !RoleFromName(role, fontRole) || size == nullptr ||
+                size->type != json::Type::Number || !(size->number >= 1 && size->number <= 512)) {
+                answer = ErrorJson("bad_args", "measure needs text, font (a role) and size (1..512)");
+            } else if (text.size() > kMaxMeasureBytes) {
+                answer = ErrorJson("too_large", "measure takes at most 2048 bytes of text");
+            } else {
+                answer = "{\"ok\":true,\"w\":" + FormatWidth(MeasureWidth(fontRole, size->number, text)) + "}";
             }
         } else if (op == "background.capture") {
             capturePending_.store(true);   // the next Present copies the frame the game just rendered

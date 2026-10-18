@@ -31,6 +31,9 @@ public:
     void ReleaseDefaultPool();
 
     uint64_t SkippedFrames() const { return skipped_.load(); }
+    // Size of the target of the last frame that began (0 before the first); read from other threads.
+    int ViewWidth() const { return viewWidth_.load(); }
+    int ViewHeight() const { return viewHeight_.load(); }
     const std::string& LastError() const { return lastError_; }
 
     bool BeginFrame(int& width, int& height) override;
@@ -59,6 +62,7 @@ private:
     std::vector<int> freeIds_;
     Saved* saved_ = nullptr;
     int viewW_ = 0, viewH_ = 0;
+    std::atomic<int> viewWidth_{0}, viewHeight_{0};
     bool sceneBegun_ = false;
     bool textured_ = false;
     bool stateKnown_ = false;

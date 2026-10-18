@@ -68,6 +68,9 @@ private:
     void Fail(const char* code, const std::string& detail) noexcept;
     void Emit(const char* name, const std::string& json) noexcept;
     std::string StatsJson();
+    // Width in canvas pixels of one line of text with the registered fonts (glyph advances, no kerning),
+    // the way DrawText lays it out. Safe from any thread.
+    double MeasureWidth(FontRole role, double size, const std::string& utf8);
 };
 
 // The detours handed to the bridge. They call the original captured by request_hook

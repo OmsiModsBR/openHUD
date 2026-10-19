@@ -22,6 +22,7 @@ internal static class PauseMenuGates
         Gates.Run("pausepkg.strings-folder", StringsFolder);
         Gates.Run("pausepkg.fingerprint-is-a-cache-key", Fingerprint);
         Gates.Run("pausepkg.identity-is-immutable", Immutable);
+        Gates.Run("pausepkg.brand-marks-png-or-svg", BrandMarks);
     }
 
     private const string Manifest = "format = 1\nname = Test pause menu\nauthor = Test author\ncredit = Test credit\n";
@@ -314,6 +315,41 @@ internal static class PauseMenuGates
         var accepted = new HashSet<string> { "good.png", "palette.png", "ok.svg", "inner-ref.svg" };
         foreach (var n in names)
             Expect.Equal(accepted.Contains(n), icons.ContainsKey(n.Replace('.', '_').Replace('-', '_')), "picture " + n + (accepted.Contains(n) ? " accepted" : " refused"));
+    }
+
+    private static void BrandMarks()
+    {
+        // SVG marks are read like PNG ones; a PNG wins when both exist; a refused file does not stop the other format.
+        using var svgOnly = Package();
+        svgOnly.Write("symbols/omsi2-logo.svg", Synthetic.Svg());
+        svgOnly.Write("symbols/openomsi.svg", Synthetic.Svg());
+        var id = Read(svgOnly).Identity;
+        Expect.Equal("symbols/omsi2-logo.svg", id.Omsi2Mark.Name, "OMSI 2 logo as an SVG");
+        Expect.True(id.Omsi2Mark.Format == PictureFormat.Svg && id.OpenOmsiMark.Format == PictureFormat.Svg && id.OpenOmsiMark.Name == "symbols/openomsi.svg", "openomsi mark as an SVG");
+
+        using var both = Package();
+        both.Write("symbols/omsi2-logo.svg", Synthetic.Svg());
+        both.Write("symbols/omsi2-logo.png", Synthetic.Png(200, 60));
+        both.Write("symbols/openomsi.svg", Synthetic.Svg());
+        both.Write("symbols/openomsi.png", Synthetic.Png(48, 48));
+        id = Read(both).Identity;
+        Expect.True(id.Omsi2Mark.Name == "symbols/omsi2-logo.png" && id.OpenOmsiMark.Name == "symbols/openomsi.png", "a PNG wins over an SVG of the same name");
+
+        using var fallback = Package();
+        fallback.Write("symbols/omsi2-logo.png", "not a png at all, just text that is long enough to pass a length check of some kind....");
+        fallback.Write("symbols/omsi2-logo.svg", Synthetic.Svg());
+        fallback.Write("symbols/openomsi.svg", Synthetic.Svg("<script>x</script>"));
+        var read = Read(fallback);
+        Expect.Equal("symbols/omsi2-logo.svg", read.Identity.Omsi2Mark.Name, "a broken PNG falls back to the SVG");
+        Expect.True(read.Identity.OpenOmsiMark.Kind == SymbolKind.None, "a refused openomsi.svg leaves the slot empty");
+        Expect.True(Expect.Mentions(read.Diagnostics, "symbols/openomsi.svg", "script") && Expect.Mentions(read.Diagnostics, "symbols/omsi2-logo.png", "PNG"), "both refusals are logged");
+
+        using var none = Package();
+        Expect.True(Read(none).Identity.Omsi2Mark.Kind == SymbolKind.Internal && Read(none).Identity.OpenOmsiMark.Kind == SymbolKind.None, "no files, the chain defaults");
+        using var viaSymbol = Package();
+        viaSymbol.Write("identity.cfg", "format = 1\nsymbol = symbols/own.svg\n");
+        viaSymbol.Write("symbols/own.svg", Synthetic.Svg());
+        Expect.Equal("symbols/own.svg", Read(viaSymbol).Identity.Omsi2Mark.Name, "the OMSI 2 mark falls back to the package's symbol");
     }
 
     private static void HostileText()

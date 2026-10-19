@@ -299,7 +299,8 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
             ["images"] = next.ImageCount.ToString(CultureInfo.InvariantCulture),
             ["vector_symbols"] = next.Glyphs.VectorCount.ToString(CultureInfo.InvariantCulture),
         };
-        var diagnostics = next.Realmap.Diagnostics.Select(d => "realmap " + d).Concat(next.PauseMenu.Diagnostics.Select(d => "pausemenu " + d)).Concat(next.Notes).Take(12).ToList();
+        // The pause-menu package's problems and the notes about its pictures come first: the report is cut at a fixed length.
+        var diagnostics = next.PauseMenu.Diagnostics.Select(d => "pausemenu " + d).Concat(next.Notes).Concat(next.Realmap.Diagnostics.Select(d => "realmap " + d)).Take(12).ToList();
         if (diagnostics.Count > 0) data["diagnostics"] = Clip(string.Join(" | ", diagnostics), 700);
         Emit("packages", data);
         if (next.Realmap.Status == PackageStatus.Ignored || next.PauseMenu.Status == PackageStatus.Ignored) Notice("packages", "UI_NOTICE_PACKAGE_IGNORED");

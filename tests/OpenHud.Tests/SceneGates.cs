@@ -7,5 +7,6 @@ internal static class SceneGates
     {
         SceneCodecGates.Register();
         RadarGates.Register();
+        UnitsAndArtGates.Register();
     }
 }

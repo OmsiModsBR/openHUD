@@ -259,13 +259,24 @@ public static class PauseMenuPackageReader
         return new SymbolRef(SymbolKind.Picture, relative, PictureFormat.Svg, 0, 0, content.Length, folder.Resolve(relative, out _));
     }
 
-    // symbols/omsi2-logo.png and symbols/openomsi.png, with the resolution chains of the spec.
+    // symbols/omsi2-logo.png|svg and symbols/openomsi.png|svg (a PNG wins when both exist), with the resolution chains of the spec.
     private static void ReadMarks(PackageFolder folder, Builder b, HashSet<string> admitted, Dictionary<string, SymbolRef?> probes, DiagnosticSink sink)
     {
-        var logo = admitted.Contains("omsi2-logo.png") ? ProbePicture(folder, "omsi2-logo.png", admitted, "symbols/omsi2-logo.png", sink) : null;
+        var logo = ProbeMark(folder, "omsi2-logo", admitted, sink);
         b.Omsi2Mark = logo ?? (b.Symbol.Kind != SymbolKind.None ? b.Symbol : SymbolRef.Internal("omsi2"));
-        var open = admitted.Contains("openomsi.png") ? ProbePicture(folder, "openomsi.png", admitted, "symbols/openomsi.png", sink) : null;
-        b.OpenOmsiMark = open ?? SymbolRef.None;
+        b.OpenOmsiMark = ProbeMark(folder, "openomsi", admitted, sink) ?? SymbolRef.None;
+    }
+
+    private static SymbolRef? ProbeMark(PackageFolder folder, string stem, HashSet<string> admitted, DiagnosticSink sink)
+    {
+        foreach (var extension in new[] { ".png", ".svg" })
+        {
+            var file = stem + extension;
+            if (!admitted.Contains(file)) continue;
+            var found = ProbePicture(folder, file, admitted, "symbols/" + file, sink);
+            if (found is not null) return found;
+        }
+        return null;
     }
 
     // ---------------------------------------------------------------- fonts/

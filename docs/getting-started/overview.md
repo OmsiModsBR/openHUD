@@ -8,7 +8,7 @@ Related pages: [installation](installation.md), [first session](first-session.md
 
 | Element | When | What you see |
 | --- | --- | --- |
-| The radar | While you drive and the game is running | A round map in a corner of the screen, centered on your vehicle and turning with it ("heading up"), with a north mark, the other vehicles around you, the scale of the circle and the game clock under it. With a realmap package it also shows water, parks, built-up areas, relief, municipality names and the map's icons ([the radar](../concepts/the-radar.md)). |
+| The radar | While you drive and the game is running | A round map in a corner of the screen, centered on your vehicle and turning with it ("heading up"), with a north mark, the other vehicles around you, the scale of the circle, and your speed and the game clock under it. With a realmap package it also shows water, parks, built-up areas, relief, municipality names and the map's icons ([the radar](../concepts/the-radar.md)). |
 | The pause menu | While OMSI is paused and its native pause menu would be shown | A panel over a dimmed copy of the game picture, with three pages: **Menu** (back to the game, new game, save game, options, quit OMSI, and the map's legend), **Map** (the whole map, which you pan and zoom) and **Lines** (the lines of the map for the session's date) ([the pause menu](../concepts/the-pause-menu.md)). |
 | A tray balloon | Rarely | When a part had to be switched off (the draw layer, the radar, the pause menu or a map package), OmsiLaunch's tray shows one short notice. |
 

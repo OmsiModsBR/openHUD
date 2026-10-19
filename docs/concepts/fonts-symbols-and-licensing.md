@@ -36,7 +36,7 @@ The draw layer asks Windows' GDI to rasterize each glyph once, at the size neede
 | Kind | What happens |
 | --- | --- |
 | PNG symbol | Validated by its header and size, then decoded on the worker thread (at most 512 pixels on the longest side after reduction) and registered with the draw layer as raw pixels. |
-| SVG symbol | Validated against the static subset (no scripts, no `DOCTYPE`, no embedded images, no external references). The module does not rasterize SVG in this version: it draws the generic mark instead. |
+| SVG symbol | Validated against the static subset (no scripts, no `DOCTYPE`, no style sheets, no embedded images, no external references), then turned into shapes of the scene protocol on the worker thread. Nothing is rasterized and the draw layer needs nothing new. A drawing that does not fit the subset or its budget is replaced by the generic mark, with the reason in the log ([the SVG subset](../reference/pause-menu-package.md#the-svg-subset)). |
 | `@omsi2`, `@simple`, `@none` | Drawn by openHUD itself. |
 | Realmap icons | PNG, up to 1024 x 1024 in the package; reduced to at most 128 pixels; at most 48 distinct pictures. |
 

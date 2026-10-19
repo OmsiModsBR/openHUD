@@ -24,6 +24,8 @@ internal static class DocsGates
         Gates.Run("docs.pause-example-values", PauseExampleValues);
         Gates.Run("docs.realmap-example-reads-clean", RealmapExampleReadsClean);
         Gates.Run("docs.rejected-entries-match-the-readers", RejectedEntriesMatchTheReaders);
+        Gates.Run("docs.svg-examples-are-drawn", SvgExamplesAreDrawn);
+        Gates.Run("docs.svg-limits-match-the-converter", SvgLimitsMatchTheConverter);
         Gates.Run("docs.settings-reference-covers-the-template", SettingsReferenceCoversTheTemplate);
         Gates.Run("docs.settings-examples-are-accepted", SettingsExamplesAreAccepted);
         Gates.Run("docs.ui-language-keys-match-the-table", UiLanguageKeysMatchTheTable);
@@ -42,7 +44,7 @@ internal static class DocsGates
     {
         var doc = Doc.Read(PauseGuide);
         var files = doc.FileBlocks("openomsi-pausemenu/");
-        Expect.True(files.Count == 12, "the guide prints 12 text files, found " + files.Count);
+        Expect.True(files.Count == 14, "the guide prints 14 text files, found " + files.Count);
         foreach (var (path, text) in files)
             dir.Write("openomsi-pausemenu/" + path, text);
         var table = doc.TableRows(@"^\| `([^`]+)` \| (PNG|TrueType) \| ([^|]+) \|$");
@@ -85,6 +87,63 @@ internal static class DocsGates
         Expect.Equal("Cidade Exemplo", result.Identity.Title("PTB"), "the template's Portuguese title");
     }
 
+    // The SVG files the guide prints are accepted by the reader and drawn by the converter, each with what it shows.
+    private static void SvgExamplesAreDrawn()
+    {
+        var files = Doc.Read(PauseGuide).FileBlocks("openomsi-pausemenu/");
+        var svgs = files.Where(f => f.Path.EndsWith(".svg", StringComparison.Ordinal)).ToList();
+        Expect.True(svgs.Count == 5, "the guide prints 5 SVG files, found " + svgs.Count);
+        foreach (var (path, text) in svgs)
+        {
+            var result = OpenHud.Art.SvgConverter.Convert(text, OpenHud.Art.SvgLimits.Icon);
+            Expect.True(result.Ok, path + " converts: " + result.Reason);
+            Expect.True(result.Notes.Count == 0, path + " is drawn without a skipped part: " + string.Join(" | ", result.Notes));
+            Expect.True(result.Art!.Shapes.Count >= 2 && result.Art.Width == 24 && result.Art.Height == 24, path + " has several shapes in a 24 x 24 box");
+            Expect.True(!result.Art.NeedsClip, path + " stays inside its view box");
+            // Fitted into a 22-unit slot it makes valid scene commands, all inside the slot.
+            var commands = result.Art.Commands(100, 100, 22, 22);
+            var scene = new OpenHud.Scene.SceneDocument(1920, 1080, false, commands);
+            Expect.True(OpenHud.Scene.SceneValidator.Validate(scene).Count == 0, path + " makes a valid scene");
+            foreach (var polygon in commands.OfType<OpenHud.Scene.PolyCommand>())
+                for (var i = 0; i + 1 < polygon.Points.Length; i += 2)
+                    Expect.True(polygon.Points[i] >= 99 && polygon.Points[i] <= 123 && polygon.Points[i + 1] >= 99 && polygon.Points[i + 1] <= 123, path + " draws inside its slot");
+        }
+        var metro = svgs.Single(f => f.Path.EndsWith("mode-metro.svg", StringComparison.Ordinal));
+        var rail = svgs.Single(f => f.Path.EndsWith("mode-rail.svg", StringComparison.Ordinal));
+        Expect.True(OpenHud.Art.SvgConverter.Convert(metro.Text).Art!.Shapes.Any(x => x.Kind == OpenHud.Art.ArtKind.Poly && x.Values.Length > 20), "the metro body's curves are flattened");
+        // The rail icon: a group transform, arcs, relative commands and a style attribute reach the shapes.
+        var railArt = OpenHud.Art.SvgConverter.Convert(rail.Text).Art!;
+        Expect.True(railArt.Shapes.Count == 3 && railArt.Shapes.All(x => x.Kind == OpenHud.Art.ArtKind.Poly && !x.Closed && x.Fill is null && x.StrokeWidth > 1.7 && x.StrokeWidth < 1.9), "three open stroked paths (the first path data has two sub-paths), the stroke scaled by 0.9");
+        Expect.True(railArt.Shapes[0].Stroke == "#ffffff" && railArt.Shapes[1].Stroke == "#ffffff", "the group's stroke");
+        Expect.Equal("#24589a", railArt.Shapes[2].Stroke ?? "", "the style attribute's stroke");
+        Expect.Near(12 - 9 * 0.9, railArt.Shapes[0].Values[0], 1e-9, "the first point went through translate(12 12) scale(0.9): x");
+        Expect.Near(12 + 8 * 0.9, railArt.Shapes[0].Values[1], 1e-9, "...y");
+        // The guide's text states what the converter does with a DOCTYPE and what it skips.
+        var guide = Doc.Read(PauseGuide).Text;
+        Expect.True(guide.Contains("the-svg-subset", StringComparison.Ordinal) || guide.Contains("The SVG subset", StringComparison.Ordinal) || guide.Contains("svg-subset", StringComparison.Ordinal), "the guide points to the subset");
+    }
+
+    // Numbers the reference states about the SVG converter are the converter's own.
+    private static void SvgLimitsMatchTheConverter()
+    {
+        var text = Doc.Read(PauseReference).Text;
+        var d = OpenHud.Art.SvgLimits.Default;
+        var symbol = OpenHud.Art.SvgLimits.Symbol;
+        var icon = OpenHud.Art.SvgLimits.Icon;
+        string N(long v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+        Expect.True(text.Contains("| File | " + d.MaxBytes / 1024 + " KiB |", StringComparison.Ordinal), "the file limit");
+        Expect.True(text.Contains("| Elements / nesting depth | " + N(d.MaxElements) + " / " + d.MaxDepth + " |", StringComparison.Ordinal), "elements and depth");
+        Expect.True(text.Contains("| Attributes on one element | " + d.MaxAttributes + " |", StringComparison.Ordinal), "attributes");
+        Expect.True(text.Contains("absolute value at most " + N((long)d.MaxAbsValue), StringComparison.Ordinal) && text.Contains("at most " + OpenHud.Art.PathFlattener.MaxNumberLength + " characters", StringComparison.Ordinal), "numbers");
+        Expect.True(text.Contains("| Points after flattening | " + N(symbol.MaxTotalPoints) + " in a drawing and " + N(symbol.MaxPointsPerShape) + " in one shape for the symbol and the two marks, " + icon.MaxTotalPoints + " and " + icon.MaxPointsPerShape + " for each icon |", StringComparison.Ordinal), "points");
+        Expect.True(text.Contains("| Scene commands per drawing | " + symbol.MaxCommands + " for the symbol and the two marks, " + icon.MaxCommands + " for each icon", StringComparison.Ordinal), "commands");
+        Expect.True(text.Contains("at most " + OpenHud.Art.PathFlattener.MaxSegmentsPerCurve + " segments per curve and " + OpenHud.Art.PathFlattener.MaxSegmentsPerArc + " per arc", StringComparison.Ordinal), "segments");
+        Expect.True(text.Contains("| Pictures from a package | " + OpenHud.Maps.MapPackageLoader.MaxPauseImages + " PNGs in all; " + OpenHud.Maps.MapPackageLoader.MaxGlyphKinds + " marker kinds and " + OpenHud.Maps.MapPackageLoader.MaxGlyphKinds + " modes |", StringComparison.Ordinal), "pictures");
+        Expect.True(text.Contains("`needs more than N drawing commands (the per-symbol budget); simplify the drawing`", StringComparison.Ordinal), "the budget message");
+        var refused = OpenHud.Art.SvgConverter.Convert("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 9 9\"><rect width=\"1\" height=\"1\"/><rect width=\"2\" height=\"2\"/></svg>", new OpenHud.Art.SvgLimits { MaxCommands = 1 });
+        Expect.True(!refused.Ok && refused.Reason == "needs more than 1 drawing commands (the per-symbol budget); simplify the drawing", "the converter says it: " + refused.Reason);
+    }
+
     // What the guide says the example means.
     private static void PauseExampleValues()
     {
@@ -107,7 +166,7 @@ internal static class DocsGates
         Expect.Equal("#c0392b", id.GroupColors["express"].ToHex(), "color.group.express");
         Expect.True(id.StopIcon.IsPicture && id.StopIcon.Format == PictureFormat.Svg, "stop_icon is an SVG");
         Expect.True(id.MarkerIcons["garage"].Kind == SymbolKind.Internal, "marker_icon.garage = @simple");
-        Expect.True(id.ModeIcons.ContainsKey("bus") && id.ModeIcons.ContainsKey("tram"), "mode icons");
+        Expect.True(id.ModeIcons.ContainsKey("bus") && id.ModeIcons.ContainsKey("tram") && id.ModeIcons.ContainsKey("metro") && id.ModeIcons.ContainsKey("rail"), "mode icons");
         Expect.Equal("Estação", id.Legend("station", "PTB") ?? "", "legend.station.PTB");
         Expect.Equal("Terminal da Linha 12", id.Legend("terminal", "PTB") ?? "", "strings/PTB.cfg wins over identity.cfg");
         Expect.Equal("Terminal", id.Legend("terminal", "ESP") ?? "", "identity.cfg plain key for a language without a variant");

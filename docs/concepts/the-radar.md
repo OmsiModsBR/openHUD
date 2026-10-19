@@ -12,14 +12,14 @@ From the center outwards:
 | --- | --- | --- |
 | Map layers | The realmap package | Water, green areas, built-up areas, relief, roads, rails, borders. Without a package: none. |
 | Municipality and place names | The realmap package | A faint name where a region lies (up to 12 on the radar) and the package's labels. |
-| Markers | The realmap package | The package's icons (stations, terminals, depots); a marker without a usable icon is a dot. |
+| Markers | The realmap package | The package's icons (stations, terminals, depots); a marker without a usable icon shows the pause-menu package's `stop_icon`, or a dot. |
 | Vehicles around you | `road-vehicles.list` and `road-vehicle.read` | Up to 48 on the radar, the nearest first. Only vehicles within 800 m of you are read. |
-| You | `player-vehicle.read` | An arrow in the middle. |
+| You | `player-vehicle.read` | An arrow in the middle: a chevron, or a plain triangle when the realmap manifest says `player = triangle`, in the color of `player_free` when it gives one. |
 | The ring | | A thin ring with four marks (the red one is north) and a small red triangle and letter showing where north is. |
-| The scale | | The radius of the circle in meters or kilometers, at its bottom edge. |
-| The strip | `time.read` | Under the radar (above it when there is no room below): the game clock. |
+| The scale | | The radius of the circle at its bottom edge: meters and kilometers, or feet and miles with `units=imperial`. |
+| The strip | `player-vehicle.read`, `time.read` | Under the radar (above it when there is no room below): your speed on the left, in km/h or mph by the `units` setting, and the game clock on the right. |
 
-The radar does not show routes, next stops, speed or a timetable in this version: the strip carries the clock only ([known limitations](../reference/known-limitations.md)).
+The speed is the vehicle's `ground_speed`, read as metres per second (an inference that the runtime round confirms) and shown as a whole number without a sign. The radar does not show routes, next stops, delays or a timetable: the catalog gives no source for them, so the next-stop and delay slots of the strip stay empty ([known limitations](../reference/known-limitations.md)).
 
 ## Zoom
 
@@ -80,10 +80,10 @@ While the pause menu is open the radar is not drawn; the menu has the map ([the 
 
 ## Without a realmap package
 
-The radar still works. It shows the ring, your arrow, the vehicles around you and the clock, over a plain dark disc. Everything that comes from the map is missing: no water, no streets, no names, no icons. A map author can add the package at any time ([using a realmap package](../guides/using-a-realmap-package.md)).
+The radar still works. It shows the ring, your arrow, the vehicles around you, the speed and the clock, over a plain dark disc. Everything that comes from the map is missing: no water, no streets, no names, no icons. A map author can add the package at any time ([using a realmap package](../guides/using-a-realmap-package.md)).
 
 ## How often it is drawn
 
-The radar is rebuilt at most ten times a second and only when something visible changed: your position to a quarter of a meter, your heading to a degree, the vehicles around you, the minute of the clock, the zoom, or new map data. Map data is read on a worker thread, a window at a time around you, and the previous window stays on the screen until the new one is ready ([performance](performance.md)).
+The radar is rebuilt at most ten times a second and only when something visible changed: your position to a third of a pixel at the current zoom (about a meter at 400 m), your heading to a degree, the vehicles around you, the shown speed, the minute of the clock, the zoom, or new map data. A rebuilt radar that comes out identical to the one on the screen is not encoded or sent either. Map data is read on a worker thread, a window at a time around you, and the previous window stays on the screen until the new one is ready ([performance](performance.md)).
 
 Related: [realmap package](../reference/realmap-package.md) · [radar and interface settings](../guides/radar-and-interface-settings.md) · [operations and events](../reference/operations-and-events.md)

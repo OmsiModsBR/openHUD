@@ -1,6 +1,6 @@
 # Primeira sessão
 
-<!-- l10n: source=getting-started/first-session.md source-sha256=94bfaa4778ac91a5ba6ef0fe2e5ba092e40b040bfb07abe32eaa6f7091cbe4cb -->
+<!-- l10n: source=getting-started/first-session.md source-sha256=8ccb6808024105dbae610255d8fb2807acf9ed9583775bf74e3c748abc1f8e3e -->
 > Tradução da [página original em inglês](../../getting-started/first-session.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Esta página percorre uma primeira sessão com o openHUD, passo a passo, com as linhas de comando exatas: iniciar o OMSI com o módulo, como o radar deve parecer, como abrir o menu de pausa e usá-lo, as teclas e como ler os próprios eventos do módulo para saber o que ele decidiu. Ela supõe que o módulo está instalado ([instalação](installation.md)). Nada aqui precisa de um pacote de mapa; o que muda com um deles é dito em cada passo.
@@ -44,7 +44,7 @@ Assim que você está no banco do motorista, o radar aparece em seu canto (infer
 - o mapa gira conforme você gira: a sua direção fica para cima. Uma pequena marca vermelha e a letra no anel mostram onde fica o norte;
 - os outros veículos ao seu redor como pequenas formas coloridas (até 48);
 - a escala do círculo na borda inferior (para o zoom padrão, `400 m`: o raio do círculo);
-- o relógio do jogo em uma faixa sob o radar;
+- a sua velocidade e o relógio do jogo em uma faixa sob o radar;
 - com um pacote realmap: água, parques, áreas construídas, ferrovia, relevo, ruas e nomes de municípios, e os ícones do pacote ([o radar](../concepts/the-radar.md)). Sem um, o círculo fica vazio, exceto pelo seu veículo e pelos veículos ao seu redor.
 
 O radar só desenha quando o jogo sabe onde você está: você precisa de um veículo de jogador, e o tile em que você está deve constar na tabela de tiles do mapa. Se você está numa câmera livre longe de qualquer veículo, ou o mapa acabou de mudar, o radar espera e não desenha nada. Isso é normal; o motivo aparece em `status` (passo 6).

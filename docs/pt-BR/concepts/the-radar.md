@@ -1,6 +1,6 @@
 # O radar
 
-<!-- l10n: source=concepts/the-radar.md source-sha256=83d783fb2e194f763842eefcbf3e55ea619e539a379bf2b1a19836961e073313 -->
+<!-- l10n: source=concepts/the-radar.md source-sha256=919624636c8ce9d15b99967f92b3309cd411f0f30af3a7afcd0f0dac44fac742 -->
 > Tradução da [página original em inglês](../../concepts/the-radar.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O radar é o minimapa redondo em um canto da tela. Esta página explica o que ele mostra, como decide onde as coisas estão, seus passos de zoom e suas duas orientações, qual é seu tamanho e sua transparência, o que muda com um pacote realmap e quando ele não desenha nada. As configurações que o controlam estão na [referência de configurações](../reference/settings.md) e no [guia de configurações do radar e da interface](../guides/radar-and-interface-settings.md).
@@ -16,14 +16,14 @@ Do centro para fora:
 | --- | --- | --- |
 | Camadas do mapa | O pacote realmap | Água, áreas verdes, áreas construídas, relevo, vias, trilhos, fronteiras. Sem pacote: nenhuma. |
 | Nomes de municípios e lugares | O pacote realmap | Um nome discreto onde uma região se encontra (até 12 no radar) e os rótulos do pacote. |
-| Marcadores | O pacote realmap | Os ícones do pacote (estações, terminais, garagens); um marcador sem ícone utilizável é um ponto. |
+| Marcadores | O pacote realmap | Os ícones do pacote (estações, terminais, garagens); um marcador sem ícone utilizável mostra o `stop_icon` do pacote de menu de pausa, ou um ponto. |
 | Veículos ao seu redor | `road-vehicles.list` e `road-vehicle.read` | Até 48 no radar, os mais próximos primeiro. Só veículos a até 800 m de você são lidos. |
-| Você | `player-vehicle.read` | Uma seta no meio. |
+| Você | `player-vehicle.read` | Uma seta no meio: um chevron, ou um triângulo simples quando o manifesto do realmap diz `player = triangle`, na cor de `player_free` quando ele a dá. |
 | O anel | | Um anel fino com quatro marcas (a vermelha é o norte) e um pequeno triângulo e uma letra vermelhos mostrando onde fica o norte. |
-| A escala | | O raio do círculo em metros ou quilômetros, na borda inferior. |
-| A faixa | `time.read` | Sob o radar (acima dele quando não há espaço embaixo): o relógio do jogo. |
+| A escala | | O raio do círculo na borda inferior: metros e quilômetros, ou pés e milhas com `units=imperial`. |
+| A faixa | `player-vehicle.read`, `time.read` | Sob o radar (acima dele quando não há espaço embaixo): a sua velocidade à esquerda, em km/h ou mph conforme a configuração `units`, e o relógio do jogo à direita. |
 
-O radar não mostra rotas, próximas paradas, velocidade nem tabela de horários nesta versão: a faixa traz apenas o relógio ([limitações conhecidas](../reference/known-limitations.md)).
+A velocidade é o `ground_speed` do veículo, lido como metros por segundo (uma inferência que a rodada em tempo de execução confirma) e mostrado como número inteiro, sem sinal. O radar não mostra rotas, próximas paradas, atrasos nem tabela de horários: o catálogo não oferece fonte para eles, então os espaços de próxima parada e de atraso da faixa ficam vazios ([limitações conhecidas](../reference/known-limitations.md)).
 
 <a id="zoom"></a>
 ## Zoom
@@ -90,11 +90,11 @@ Enquanto o menu de pausa está aberto, o radar não é desenhado; o menu tem o m
 <a id="without-a-realmap-package"></a>
 ## Sem um pacote realmap
 
-O radar continua funcionando. Ele mostra o anel, a sua seta, os veículos ao seu redor e o relógio, sobre um disco escuro liso. Tudo o que vem do mapa fica faltando: sem água, sem ruas, sem nomes, sem ícones. O autor de um mapa pode adicionar o pacote a qualquer momento ([usando um pacote realmap](../guides/using-a-realmap-package.md)).
+O radar continua funcionando. Ele mostra o anel, a sua seta, os veículos ao seu redor, a velocidade e o relógio, sobre um disco escuro liso. Tudo o que vem do mapa fica faltando: sem água, sem ruas, sem nomes, sem ícones. O autor de um mapa pode adicionar o pacote a qualquer momento ([usando um pacote realmap](../guides/using-a-realmap-package.md)).
 
 <a id="how-often-it-is-drawn"></a>
 ## Com que frequência é desenhado
 
-O radar é reconstruído no máximo dez vezes por segundo e só quando algo visível mudou: a sua posição a um quarto de metro, a sua direção a um grau, os veículos ao seu redor, o minuto do relógio, o zoom ou novos dados do mapa. Os dados do mapa são lidos em uma thread de trabalho, uma janela por vez ao seu redor, e a janela anterior permanece na tela até a nova ficar pronta ([desempenho](performance.md)).
+O radar é reconstruído no máximo dez vezes por segundo e só quando algo visível mudou: a sua posição a um terço de pixel no zoom atual (cerca de um metro a 400 m), a sua direção a um grau, os veículos ao seu redor, a velocidade mostrada, o minuto do relógio, o zoom ou novos dados do mapa. Um radar reconstruído que sai idêntico ao que está na tela também não é codificado nem enviado. Os dados do mapa são lidos em uma thread de trabalho, uma janela por vez ao seu redor, e a janela anterior permanece na tela até a nova ficar pronta ([desempenho](performance.md)).
 
 Relacionado: [pacote realmap](../reference/realmap-package.md) · [configurações do radar e da interface](../guides/radar-and-interface-settings.md) · [operações e eventos](../reference/operations-and-events.md)

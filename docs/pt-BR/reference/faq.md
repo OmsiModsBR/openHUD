@@ -1,6 +1,6 @@
 # Perguntas frequentes
 
-<!-- l10n: source=reference/faq.md source-sha256=432de77bb47ac0b181963babb5ca1b58440178b9da075f2660d56d70a868652e -->
+<!-- l10n: source=reference/faq.md source-sha256=c30d9b80e1c6e69049ee4bcc394a097dfa195919a9a55d8e1f8d3cefefdfc3d3 -->
 > Tradução da [página original em inglês](../../reference/faq.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Respostas curtas às perguntas mais comuns sobre o openHUD. Cada resposta aponta para a página com os detalhes.
@@ -30,7 +30,7 @@ Provavelmente porque o mapa não tem pacote realmap, ou porque o jogo ainda não
 <a id="where-is-the-speed-the-next-stop-the-timetable"></a>
 ## Onde estão a velocidade, a próxima parada, a tabela horária?
 
-Não são desenhadas na 0.1.0. A faixa sob o radar mostra o relógio ([limitações conhecidas](known-limitations.md)).
+A velocidade está na faixa sob o radar, ao lado do relógio, na unidade da configuração `units`. A próxima parada, a linha e o atraso não são desenhados: o catálogo não oferece fonte para eles ([limitações conhecidas](known-limitations.md)).
 
 <a id="does-it-replace-omsis-pause-menu-on-every-build"></a>
 ## Ele substitui o menu de pausa do OMSI em todas as builds?
@@ -80,7 +80,7 @@ Não. Fontes e logotipos vêm do pacote do mapa, e o autor é responsável pelo 
 <a id="why-was-my-svg-symbol-not-drawn"></a>
 ## Por que meu símbolo SVG não foi desenhado?
 
-O módulo valida SVG mas não o rasteriza na 0.1.0; use um PNG. A marca genérica é desenhada no lugar.
+Ele é desenhado quando cabe no subconjunto estático e no seu orçamento ([o subconjunto de SVG](pause-menu-package.md#the-svg-subset)). Quando não cabe, a marca genérica é desenhada no lugar e o motivo está no evento `packages` (`diagnostics`) e no log do pacote: um `DOCTYPE` (remova essa linha), um script, uma folha de estilo, uma referência externa, ou um desenho com mais formas do que o espaço permite.
 
 <a id="why-does-a-package-entry-get-dropped"></a>
 ## Por que uma entrada de pacote é descartada?
@@ -90,7 +90,7 @@ A linha de log diz qual e por quê; todas as mensagens estão nas referências (
 <a id="does-the-units-setting-do-anything"></a>
 ## A configuração `units` faz alguma coisa?
 
-Ainda não: nenhum texto desenhado depende dela na 0.1.0.
+Sim. Ela escolhe km/h ou mph para a velocidade na faixa e metros ou pés para as escalas ([configurações](settings.md#units)).
 
 <a id="does-it-slow-the-game"></a>
 ## Ele deixa o jogo mais lento?

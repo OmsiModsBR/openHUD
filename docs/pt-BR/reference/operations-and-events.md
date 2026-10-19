@@ -1,6 +1,6 @@
 # Operações e eventos
 
-<!-- l10n: source=reference/operations-and-events.md source-sha256=5630ab2b5ec0c7934e5427354555826e28d0db20045265d4ee86f09338f217f6 -->
+<!-- l10n: source=reference/operations-and-events.md source-sha256=4c95ad1ef40bc9875265a10697b01d0a02716c3e5de14266406d7d5772327808 -->
 > Tradução da [página original em inglês](../../reference/operations-and-events.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O openHUD expõe quatro operações enquanto uma sessão roda e informa por eventos de runtime e avisos na bandeja. Esta página lista cada uma com seus argumentos, resultados e erros, com exemplos de chamadas, e cada evento com os seus dados. As operações são acessadas com `/runtime:module.openhud.<operation>` e `/runtime-arg:<name>=<value>`; os eventos são lidos com `OmsiLaunch.exe events read` ou `events watch`. As regras de operações, eventos e avisos são as da referência de Runtime Modules do OmsiLaunch.
@@ -39,6 +39,7 @@ OmsiLaunch.exe /runtime:module.openhud.status
 | `radar_features`, `fullmap_features` | recursos na janela de radar e na janela de mapa mais recentes |
 | `fonts_registered`, `images_registered`, `uploads_pending`, `uploads_failed` | o que foi enviado à camada de desenho |
 | `pause_menu`, `pause_state` | `off`, `on` ou `degraded`; o estado da máquina de estados |
+| `map_queries`, `map_builds` | janelas de dados do mapa pedidas à thread de trabalho; mapas do menu de pausa montados (um menu apenas sob o ponteiro não remonta o seu mapa) |
 | `scenes_published`, `scenes_skipped`, `scene_failures` | cenas enviadas, puladas por não terem mudado, recusadas |
 | `ticks`, `tick_last_ms`, `tick_max_ms`, `slow_ticks` | contagem e tempos dos ticks ([desempenho](../concepts/performance.md)) |
 | `frames_with_problems`, `faults`, `last_fault` | leituras do jogo que falharam em um tick; exceções contidas e a última (`area: Type`) |
@@ -97,7 +98,7 @@ Os eventos se chamam `module.openhud.<name>`, com um objeto JSON de strings como
 | `settings-issue` | Uma configuração era inutilizável | `issues`: `key=value (reason); ...` |
 | `hooks` | A camada de desenho instalou seus hooks Direct3D (componente nativo) | `present`, `reset` (`installed`) |
 | `gameplay-ready` | O mundo está em execução | nenhum |
-| `packages` | Os pacotes de um mapa foram carregados | `map`, `realmap`, `pausemenu` (status), `fonts`, `images`, `diagnostics` (primeiras linhas, no máximo 700 caracteres) |
+| `packages` | Os pacotes de um mapa foram carregados | `map`, `realmap`, `pausemenu` (status), `fonts`, `images`, `vector_symbols` (desenhos SVG do pacote de menu de pausa), `diagnostics` (primeiras linhas, as do pacote de menu de pausa primeiro, no máximo 700 caracteres) |
 | `package-problem` | O carregamento dos pacotes falhou | `detail` |
 | `read-problem` | Uma parte do jogo não pôde ser lida (cada tipo uma vez, no máximo 12) | `problem` |
 | `draw-failed` | A camada de desenho informou uma falha | `detail` |

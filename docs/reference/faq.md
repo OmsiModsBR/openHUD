@@ -22,7 +22,7 @@ Probably because the map has no realmap package, or because the game has not tol
 
 ## Where is the speed, the next stop, the timetable?
 
-Not drawn in 0.1.0. The strip under the radar shows the clock ([known limitations](known-limitations.md)).
+The speed is on the strip under the radar, next to the clock, in the unit of the `units` setting. The next stop, the line and the delay are not drawn: the catalog gives no source for them ([known limitations](known-limitations.md)).
 
 ## Does it replace OMSI's pause menu on every build?
 
@@ -62,7 +62,7 @@ No. Fonts and logos come from the map's package, and the author is responsible f
 
 ## Why was my SVG symbol not drawn?
 
-The module validates SVG but does not rasterize it in 0.1.0; use a PNG. The generic mark is drawn instead.
+It is drawn when it fits the static subset and its budget ([the SVG subset](pause-menu-package.md#the-svg-subset)). When it is not, the generic mark is drawn instead and the reason is in the `packages` event (`diagnostics`) and in the package log: a `DOCTYPE` (remove that line), a script, a style sheet, an external reference, or a drawing with more shapes than the slot allows.
 
 ## Why does a package entry get dropped?
 
@@ -70,7 +70,7 @@ The log line says which and why; every message is in the references ([pause-menu
 
 ## Does the `units` setting do anything?
 
-Not yet: no drawn text depends on it in 0.1.0.
+Yes. It chooses km/h or mph for the speed on the strip and meters or feet for the scales ([settings](settings.md#units)).
 
 ## Does it slow the game?
 

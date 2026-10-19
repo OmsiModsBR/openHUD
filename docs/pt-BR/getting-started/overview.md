@@ -1,6 +1,6 @@
 # O que é o openHUD
 
-<!-- l10n: source=getting-started/overview.md source-sha256=6243dad0c0a3b2c10ce1af0ed13751c013e187a15acc5c08f067b95ef7b015dd -->
+<!-- l10n: source=getting-started/overview.md source-sha256=64e36046e386f83928e58553511a57471f12832c33ec1909eaf272187941459b -->
 > Tradução da [página original em inglês](../../getting-started/overview.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O openHUD (id do módulo `openhud`, versão `0.1.0`) é um HUD em jogo e um menu de pausa para o OMSI 2, empacotado como um Runtime Module do OmsiLaunch. Ele desenha um radar redondo (um minimapa) sobre a vista do jogo e, onde a build do OMSI permite, substitui o menu de pausa nativo do OMSI por um próprio, com uma página de menu, uma página de mapa em tela cheia e uma página com as linhas do mapa. Foi feito para mapas que trazem os pacotes opcionais do openOMSI (um mapa real para o radar e uma identidade para o menu de pausa), e funciona sem eles. Esta página diz o que ele faz, o que desenha, o que substitui, o que deixa em paz e de quais partes é feito. Requisitos e instalação estão em [instalação](installation.md); a primeira sessão está em [primeira sessão](first-session.md).
@@ -12,7 +12,7 @@ Páginas relacionadas: [instalação](installation.md), [primeira sessão](first
 
 | Elemento | Quando | O que você vê |
 | --- | --- | --- |
-| O radar | Enquanto você dirige e o jogo está rodando | Um mapa redondo em um canto da tela, centrado no seu veículo e girando com ele ("heading up"), com uma marca de norte, os outros veículos ao seu redor, a escala do círculo e o relógio do jogo embaixo. Com um pacote realmap, mostra também água, parques, áreas construídas, relevo, nomes de municípios e os ícones do mapa ([o radar](../concepts/the-radar.md)). |
+| O radar | Enquanto você dirige e o jogo está rodando | Um mapa redondo em um canto da tela, centrado no seu veículo e girando com ele ("heading up"), com uma marca de norte, os outros veículos ao seu redor, a escala do círculo, e a sua velocidade e o relógio do jogo embaixo. Com um pacote realmap, mostra também água, parques, áreas construídas, relevo, nomes de municípios e os ícones do mapa ([o radar](../concepts/the-radar.md)). |
 | O menu de pausa | Enquanto o OMSI está pausado e o menu de pausa nativo seria mostrado | Um painel sobre uma cópia escurecida da imagem do jogo, com três páginas: **Menu** (voltar ao jogo, novo jogo, salvar jogo, opções, sair do OMSI e a legenda do mapa), **Mapa** (o mapa inteiro, que você move e amplia) e **Linhas** (as linhas do mapa para a data da sessão) ([o menu de pausa](../concepts/the-pause-menu.md)). |
 | Um balão na bandeja | Raramente | Quando uma parte precisou ser desligada (a camada de desenho, o radar, o menu de pausa ou um pacote de mapa), a bandeja do OmsiLaunch mostra um aviso curto. |
 

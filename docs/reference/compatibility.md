@@ -49,7 +49,7 @@ Declared in the manifest (`runtime_operations`), run in process on OMSI's UI thr
 | `time.read` | The clock in the radar's strip; the date that selects the lines | The strip has no clock; all lines are listed |
 | `map.read` | Which map is playing (and the package lookup) | No packages are loaded; the radar draws without a map |
 | `map.tiles.list` | The tile table that places vehicles on the map's grid | The player's position is not resolved; the radar waits (`the player's tile is not in the map's tile table`) |
-| `player-vehicle.read` | Where you are and your heading | No radar (`no player vehicle` / `player unreadable`) |
+| `player-vehicle.read` | Where you are, your heading and your speed | No radar (`no player vehicle` / `player unreadable`) |
 | `road-vehicles.list`, `road-vehicle.read` | The vehicles around you | No vehicles on the radar |
 | `camera.read`, `timetable.read`, `weather.read` | Read for the snapshot | That part is unavailable |
 | `ui.pause.state`, `ui.pause.take-over`, `ui.pause.restore-native`, `ui.pause.action` | The pause menu | The pause menu falls back; see [the pause menu](../concepts/the-pause-menu.md#when-something-fails) |

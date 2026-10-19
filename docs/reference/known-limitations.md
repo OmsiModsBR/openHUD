@@ -15,8 +15,8 @@ Related pages: [validation status](../status/validation.md), [compatibility](com
 
 | Limitation | Detail |
 | --- | --- |
-| The strip shows the clock only | No next stop, line, speed or delay is drawn, although the interface table has the texts for them. |
-| `units` has no visible effect | The setting is validated and reported, but no text the module draws depends on it; the scale label is in meters and kilometers. |
+| No next stop, line or delay on the strip | The strip shows the speed and the clock. The catalog gives no source for the next stop, the line or the delay, so those slots stay empty (the interface table has their texts). |
+| The speed unit is an assumption | The catalog's `ground_speed` is read as metres per second, which is inferred, not confirmed (one named constant, `FrameSource.GroundSpeedToMetresPerSecond`). The speed on the strip is only as right as that assumption until the runtime round confirms it ([validation status](../status/validation.md)). |
 | Heading up only | The radar has no north-up mode setting; the Map page is north up. |
 | Needs a resolved player tile | Without the player's tile in the map's tile table the radar draws nothing. |
 | Vehicles are one shape | Every vehicle around you is drawn with the same kind (no bus, tram or truck distinction). |
@@ -26,8 +26,8 @@ Related pages: [validation status](../status/validation.md), [compatibility](com
 
 | Limitation | Detail |
 | --- | --- |
-| Parts of the formats are read but not drawn | Pause-menu: `stop_icon`, `marker_icon.*`, `mode_icon.*`, `color.brt`, `symbols/omsi2-logo.png`, `symbols/openomsi.png`, `author`, `credit`. Realmap: the manifest colors, the player marker keys (`player*`), `brt_lines`, the `*_vehicles` lists, street names and speed limits, the municipality row ([per-map packages](../concepts/per-map-packages.md#what-the-module-uses)). |
-| SVG symbols are validated, not drawn | The draw layer takes raw pixels; the module decodes PNG only. A map symbol that is an SVG is replaced by the generic mark (the `packages` event notes it). |
+| Parts of the formats are read but not drawn | Pause-menu: `author` (for people). Realmap: `player_line` and `player_brt` (they need the player's active line, which the catalog does not give), the `light_*` colors (the radar is always dark), the `*_vehicles` lists, street names and speed limits, the municipality row, `alignment`, the manifest's `credit` ([per-map packages](../concepts/per-map-packages.md#what-the-module-uses)). |
+| SVG is a static subset | Rectangles, circles, ellipses, lines, polygons and paths with flat colors are drawn as scene shapes. Gradients, patterns, filters, masks, clip paths, text, `use` and animation are skipped with a reason; `evenodd` holes in a path are filled; dashes are drawn solid; a drawing over its budget of commands is refused and the generic mark is drawn ([the SVG subset](pause-menu-package.md#the-svg-subset)). |
 | `theme` and `layout` only choose the symbol | They do not change the menu's layout or colors. |
 | The pause-menu package is looked up in the map's own folder only | A package placed in another content root is not found. |
 | A package is read once per map | Edits show after a restart of the session. At most eight maps are loaded in one session. |
@@ -58,16 +58,16 @@ Related pages: [validation status](../status/validation.md), [compatibility](com
 | No session program | `OpenHud.Host` in the repository is an empty placeholder; the manifest declares no host component. |
 | No data directory | The module keeps nothing between sessions. |
 | No settings window or in-game settings | Settings are OmsiLaunch's module settings. |
-| The `credit` of a package is not shown | The menu footer shows the hint only. |
 
 ## Differences found between the pieces
 
 | Where | Difference | Which wins |
 | --- | --- | --- |
 | `module.template.json` says `language` `auto` "follows OMSI's language" | The module passes no OMSI language to the resolver, so `auto` is English | The code |
-| `module.template.json` says `units` is for "speed and distance on the radar" | Nothing drawn uses it | The code |
 | `NOTICE.txt` says `OpenHud.Host.exe` "is started by OmsiLaunch as a session program" | The manifest has no host component, and the build does not package it | The manifest |
-| The pause-menu package draft says the folder may be in another content root and that `credit` is shown in the footer | The module looks in the map's folder only, and the footer shows no credit | The code |
+| The pause-menu package draft says the folder may be in another content root | The module looks in the map's folder only | The code |
+| The draft says the fallback of the OMSI 2 mark is the text "OMSI 2" | The generic mark is a neutral outlined tag with a steering wheel; openHUD writes no brand text | The code |
+| The draft says the footer shows only the versions and the credit | The footer also shows the hint with the keys | The code |
 | The draft says the fallback font is Segoe UI | The draw layer uses the font Windows uses for message boxes (Segoe UI on current Windows) | The code |
 | The draft says unknown package files are ignored and `@2x` is used above scale 1.5 | The module uses the `@2x` picture above `ui_scale_percent` 150 | The code |
 | `PauseStrings` (the menu's catalogue) and the interface table both define some `UI_PAUSE_*` keys with different texts ("Back to the game" and "Resume") | The menu shows the catalogue's | The code ([UI language keys](ui-language-keys.md)) |

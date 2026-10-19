@@ -63,7 +63,7 @@ You make these pictures; the sizes are the sizes of the example. Rules to keep i
 - `omsi2-logo.png` and `openomsi.png` are optional. openHUD ships no copy of the OMSI 2 trademark logo; if you want it in the menu, you supply it here and you are responsible for the right to do so ([licensing](../concepts/fonts-symbols-and-licensing.md)).
 - The fonts are real files that you obtain with a licence that allows redistribution inside your package. Never copy a commercial font into a package.
 
-The three SVG files below are static and contain only shapes. An SVG may not contain a script, a `DOCTYPE`, an embedded image or any external reference; many editors add a `DOCTYPE` on export, so remove it.
+The five SVG files below are static and draw only shapes, paths and flat colors. openHUD turns them into the shapes of the scene, so they stay sharp at any size and need no PNG. An SVG may not contain a script, a style sheet, a `DOCTYPE`, an embedded image or any external reference; many editors add a `DOCTYPE` on export, so remove it. What is drawn and what is skipped is in [the SVG subset](../reference/pause-menu-package.md#the-svg-subset). The last two files show more of it: curves, arcs, relative commands, a group transform and a `style` attribute.
 
 #### `openomsi-pausemenu/symbols/stop.svg`
 
@@ -92,6 +92,30 @@ The three SVG files below are static and contain only shapes. An SVG may not con
   <rect x="5" y="3" width="14" height="15" rx="3" fill="#ffffff"/>
   <rect x="7" y="6" width="10" height="5" fill="#24589a"/>
   <path d="M8 21 L12 18 L16 21" fill="none" stroke="#ffffff" stroke-width="2"/>
+</svg>
+```
+
+#### `openomsi-pausemenu/symbols/mode-metro.svg`
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M12 3 C7 3 4 6 4 10 V17 H6 L4 20 H8 L9.5 18 H14.5 L16 20 H20 L18 17 H20 V10 C20 6 17 3 12 3 Z" fill="#ffffff"/>
+  <rect x="6" y="7" width="12" height="5" rx="1" fill="#24589a"/>
+  <circle cx="8.5" cy="15" r="1" fill="#24589a"/>
+  <circle cx="15.5" cy="15" r="1" fill="#24589a"/>
+</svg>
+```
+
+#### `openomsi-pausemenu/symbols/mode-rail.svg`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A rail icon: arcs, relative commands, a group transform and a style attribute -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <g transform="translate(12 12) scale(0.9)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round">
+    <path d="M-9 8 h18 M-6 8 v-5 a6 6 0 0 1 12 0 v5"/>
+    <path d="M-9 12 q9 -4 18 0" style="stroke:#24589a"/>
+  </g>
 </svg>
 ```
 
@@ -131,6 +155,8 @@ marker_icon.terminal = symbols/terminal.png
 marker_icon.garage = @simple
 mode_icon.bus = symbols/mode-bus.svg
 mode_icon.tram = symbols/mode-tram.svg
+mode_icon.metro = symbols/mode-metro.svg
+mode_icon.rail = symbols/mode-rail.svg
 
 # Legend texts, with the language variants
 legend.station = Station
@@ -242,6 +268,8 @@ openomsi-pausemenu\
     stop.svg
     mode-bus.svg
     mode-tram.svg
+    mode-metro.svg
+    mode-rail.svg
   fonts\
     fonts.cfg
     FONTS-LICENSE.txt
@@ -261,7 +289,7 @@ There is no separate checker program: the module's own reader is the check, and 
 2. Every `.cfg` file is UTF-8 text of at most 64 KiB, with `key = value` lines.
 3. No key appears twice in a file (the second one is dropped).
 4. Every picture path starts with `symbols/`, uses `/`, and exists directly in `symbols`.
-5. Every picture is a PNG of at most 2048 x 2048 and 2 MiB, or an SVG of at most 256 KiB without a script, `DOCTYPE`, embedded image or external reference.
+5. Every picture is a PNG of at most 2048 x 2048 and 2 MiB, or an SVG of at most 256 KiB without a script, style sheet, `DOCTYPE`, embedded image or external reference, and within its budget of shapes (160 for the symbol and the two marks, 32 for an icon).
 6. `symbols` holds at most 64 files and 16 MiB.
 7. Every color is `#rrggbb` or `#rrggbbaa`.
 8. If `fonts` holds a font file: `fonts.cfg` and a non-empty `FONTS-LICENSE.txt` exist; every font is a static TrueType or OpenType file of at most 4 MiB; at most 12 files.

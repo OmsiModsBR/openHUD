@@ -20,7 +20,7 @@ The managed core decides **what** is drawn; the native draw layer only **rasteri
 | `background.release` | `{}` | frees the pause background texture |
 | `visible` | `{"on":true}` | `false` stops drawing at once (used on stop, on failure and while a native modal dialog is in front) |
 | `measure` | `{"text":"Next stop","size":14,"font":"bold"}` | the width of one line of text in canvas pixels, laid out with the registered fonts the way a `text` command is (advances only, no kerning); answers `{"ok":true,"w":71.25}`. `size` is 1..512, `font` a role, `text` at most 2048 bytes. The module uses it to size chips and strips; it caches the answers |
-| `stats` | `{}` | counters: scenes drawn, commands, images, fonts, skipped frames, device resets, last error, and `view_w`/`view_h`, the size in pixels of the target of the last frame (0 before the first); the module maps the mouse of the pause menu with it |
+| `stats` | `{}` | counters: scenes drawn, commands, images, fonts, `tessellations` and `replays` (frames built from the commands, and frames replayed from the batches of the last build), skipped frames, device resets, last error, and `view_w`/`view_h`, the size in pixels of the target of the last frame (0 before the first); the module maps the mouse of the pause menu with it |
 
 Answers are `{"ok":true,...}` or `{"ok":false,"code":"...","detail":"..."}`. An unknown operation or a malformed document never crashes OMSI: it answers `ok:false` and keeps the previous scene.
 
@@ -102,3 +102,4 @@ An unknown `t` is skipped and counted in `stats` (forward compatibility); a miss
 - A scene older than the one being drawn is never drawn after it (the layer keeps the latest only).
 - Everything the layer allocates (textures, fonts, device objects) is released on `visible:false`-then-stop and before a device `Reset`; it is recreated after.
 - Limits above are enforced by both: the core never produces a scene over them, the layer refuses one that is.
+- The layer tessellates a scene once and replays the result at every `Present` until the scene, an image, a font, the view size or the device changes (a `Reset` included); a replay draws exactly what a fresh tessellation of the same scene would.

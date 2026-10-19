@@ -1,6 +1,6 @@
 # Referência de configurações
 
-<!-- l10n: source=reference/settings.md source-sha256=cbc056f37fc587b56a8009557916d8ddae5d19da11109c03a92b4dc3a5ad3530 -->
+<!-- l10n: source=reference/settings.md source-sha256=d9a136d77cb1e8ded17fdfd5d17240d5f577d23409231e5a8ebd5da8789bab95 -->
 > Tradução da [página original em inglês](../../reference/settings.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O openHUD declara 9 configurações no seu manifesto. Esta página lista cada chave com o seu tipo, padrão e limites, depois descreve o que cada uma faz e mostra um exemplo. A tabela de resumo é conferida com `module.template.json` (a fonte do `module.json` empacotado) pela suíte de testes e por `tools\Check-Docs.ps1`, e o comportamento descrito foi conferido com `src/OpenHud.Core/Settings/HudSettings.cs` e com o módulo (`src/OpenHud.Module/HudModule.cs`).
@@ -118,7 +118,7 @@ OmsiLaunch.exe /new /map:"maps\Example City\global.cfg" /entrypoint-index:1 /mod
 <a id="units"></a>
 ### `units`
 
-`metric` ou `imperial`, para velocidade e distância no HUD. Na versão 0.1.0 nenhum texto desenhado depende dela ainda (a escala do radar está em metros e quilômetros); ela é validada e informada por `status` ([limitações conhecidas](known-limitations.md)).
+`metric` ou `imperial`, para velocidade e distância no HUD. Métrico mostra a velocidade em km/h e as escalas em metros e quilômetros; imperial mostra mph, pés e milhas (a escala do radar lê 330 ft, 660 ft, 0.25 mi, 0.5 mi, 1 mi, 2 mi, e a barra de escala da página Mapa usa pés e milhas). A velocidade vem do `ground_speed` do veículo, lido como metros por segundo ([limitações conhecidas](known-limitations.md)). O valor efetivo é informado por `status`.
 
 ```text
 OmsiLaunch.exe /new /map:"maps\Example City\global.cfg" /entrypoint-index:1 /module:openhud /module-setting:openhud.units=imperial

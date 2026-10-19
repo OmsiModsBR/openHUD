@@ -1,6 +1,6 @@
 # Limitações conhecidas
 
-<!-- l10n: source=reference/known-limitations.md source-sha256=2e31a862d07f186d81ef1c48296037ac41905ed7764cfe46a326ff81b1e4ba10 -->
+<!-- l10n: source=reference/known-limitations.md source-sha256=d1fe43f2c615d23e2a2c8117cf0b2ce5e14b2d105cca098f39aac90160d2aa5a -->
 > Tradução da [página original em inglês](../../reference/known-limitations.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Esta página lista, a partir do código, o que o openHUD `0.1.0` não faz, faz só em parte ou faz com um risco aceito, para que você não crie expectativas sobre um comportamento que ele não oferece. Onde o manifesto, o aviso, os rascunhos de especificação e o código divergem, vale o código; as diferenças encontradas estão listadas no final.
@@ -20,8 +20,8 @@ Páginas relacionadas: [status de validação](../status/validation.md), [compat
 
 | Limitação | Detalhe |
 | --- | --- |
-| A faixa mostra apenas o relógio | Nenhuma próxima parada, linha, velocidade ou atraso é desenhada, embora a tabela da interface tenha os textos para eles. |
-| `units` não tem efeito visível | A configuração é validada e informada, mas nenhum texto que o módulo desenha depende dela; o rótulo de escala está em metros e quilômetros. |
+| Sem próxima parada, linha nem atraso na faixa | A faixa mostra a velocidade e o relógio. O catálogo não oferece fonte para a próxima parada, a linha nem o atraso, então esses espaços ficam vazios (a tabela da interface tem os seus textos). |
+| A unidade da velocidade é uma suposição | O `ground_speed` do catálogo é lido como metros por segundo, o que é inferido, não confirmado (uma constante nomeada, `FrameSource.GroundSpeedToMetresPerSecond`). A velocidade na faixa vale o que vale essa suposição até a rodada em tempo de execução confirmá-la ([status de validação](../status/validation.md)). |
 | Apenas com a frente para cima | O radar não tem configuração de modo norte para cima; a página Mapa é norte para cima. |
 | Precisa de um tile do jogador resolvido | Sem o tile do jogador na tabela de tiles do mapa, o radar não desenha nada. |
 | Os veículos têm uma só forma | Todo veículo ao seu redor é desenhado com o mesmo tipo (sem distinção entre ônibus, bonde ou caminhão). |
@@ -32,8 +32,8 @@ Páginas relacionadas: [status de validação](../status/validation.md), [compat
 
 | Limitação | Detalhe |
 | --- | --- |
-| Partes dos formatos são lidas mas não desenhadas | Menu de pausa: `stop_icon`, `marker_icon.*`, `mode_icon.*`, `color.brt`, `symbols/omsi2-logo.png`, `symbols/openomsi.png`, `author`, `credit`. Realmap: as cores do manifesto, as chaves do marcador do jogador (`player*`), `brt_lines`, as listas `*_vehicles`, nomes de ruas e limites de velocidade, a linha do município ([pacotes por mapa](../concepts/per-map-packages.md#what-the-module-uses)). |
-| Símbolos SVG são validados, não desenhados | A camada de desenho recebe pixels brutos; o módulo decodifica apenas PNG. Um símbolo de mapa em SVG é substituído pela marca genérica (o evento `packages` registra isso). |
+| Partes dos formatos são lidas mas não desenhadas | Menu de pausa: `author` (para as pessoas). Realmap: `player_line` e `player_brt` (precisam da linha ativa do jogador, que o catálogo não dá), as cores `light_*` (o radar é sempre escuro), as listas `*_vehicles`, nomes de ruas e limites de velocidade, a linha do município, `alignment`, o `credit` do manifesto ([pacotes por mapa](../concepts/per-map-packages.md#what-the-module-uses)). |
+| SVG é um subconjunto estático | Retângulos, círculos, elipses, linhas, polígonos e caminhos com cores lisas são desenhados como formas da cena. Gradientes, padrões, filtros, máscaras, caminhos de recorte, texto, `use` e animação são ignorados com um motivo; furos `evenodd` num caminho são preenchidos; tracejados são desenhados contínuos; um desenho acima do seu orçamento de comandos é recusado e a marca genérica é desenhada ([o subconjunto de SVG](pause-menu-package.md#the-svg-subset)). |
 | `theme` e `layout` só escolhem o símbolo | Eles não mudam o leiaute nem as cores do menu. |
 | O pacote de menu de pausa é procurado apenas na pasta do próprio mapa | Um pacote colocado em outra raiz de conteúdo não é encontrado. |
 | Um pacote é lido uma vez por mapa | As edições aparecem após reiniciar a sessão. No máximo oito mapas são carregados em uma sessão. |
@@ -67,7 +67,6 @@ Páginas relacionadas: [status de validação](../status/validation.md), [compat
 | Sem programa de sessão | `OpenHud.Host` no repositório é um espaço reservado vazio; o manifesto não declara componente host. |
 | Sem diretório de dados | O módulo não guarda nada entre sessões. |
 | Sem janela de configurações nem configurações no jogo | As configurações são as configurações de módulo do OmsiLaunch. |
-| O `credit` de um pacote não é mostrado | O rodapé do menu mostra apenas a dica. |
 
 <a id="differences-found-between-the-pieces"></a>
 ## Diferenças encontradas entre as peças
@@ -75,9 +74,10 @@ Páginas relacionadas: [status de validação](../status/validation.md), [compat
 | Onde | Diferença | Qual vale |
 | --- | --- | --- |
 | `module.template.json` diz que `language` `auto` "follows OMSI's language" | O módulo não passa nenhum idioma do OMSI ao resolvedor, então `auto` é inglês | O código |
-| `module.template.json` diz que `units` serve para "speed and distance on the radar" | Nada do que é desenhado a usa | O código |
 | `NOTICE.txt` diz que `OpenHud.Host.exe` "is started by OmsiLaunch as a session program" | O manifesto não tem componente host, e a compilação não o empacota | O manifesto |
-| O rascunho do pacote de menu de pausa diz que a pasta pode estar em outra raiz de conteúdo e que `credit` é mostrado no rodapé | O módulo procura apenas na pasta do mapa, e o rodapé não mostra crédito | O código |
+| O rascunho do pacote de menu de pausa diz que a pasta pode estar em outra raiz de conteúdo | O módulo procura apenas na pasta do mapa | O código |
+| O rascunho diz que a alternativa da marca do OMSI 2 é o texto "OMSI 2" | A marca genérica é uma etiqueta neutra com contorno e um volante; o openHUD não escreve nenhum texto de marca | O código |
+| O rascunho diz que o rodapé mostra apenas as versões e o crédito | O rodapé mostra também a dica com as teclas | O código |
 | O rascunho diz que a fonte de reserva é Segoe UI | A camada de desenho usa a fonte que o Windows usa nas caixas de mensagem (Segoe UI no Windows atual) | O código |
 | O rascunho diz que arquivos de pacote desconhecidos são ignorados e que `@2x` é usado acima da escala 1,5 | O módulo usa a imagem `@2x` acima de `ui_scale_percent` 150 | O código |
 | `PauseStrings` (o catálogo do menu) e a tabela da interface definem algumas chaves `UI_PAUSE_*` com textos diferentes ("Back to the game" e "Resume") | O menu mostra os do catálogo | O código ([chaves de idioma da interface](ui-language-keys.md)) |

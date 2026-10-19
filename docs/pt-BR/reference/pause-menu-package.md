@@ -1,6 +1,6 @@
 # Formato do pacote de menu de pausa
 
-<!-- l10n: source=reference/pause-menu-package.md source-sha256=98b05f1baef3ff485604d7126d04cffda648834faca78010ee770c57ae3fb6f9 -->
+<!-- l10n: source=reference/pause-menu-package.md source-sha256=30b8a83c7723b8833dcc4622b784aa363d5e4e568d2fcf58bbaf76425207d482 -->
 > Tradução da [página original em inglês](../../reference/pause-menu-package.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Esta página é a referência normativa do pacote `openomsi-pausemenu`: a pasta que o autor de um mapa distribui junto ao mapa para dar ao menu de pausa a sua identidade (título, símbolos, cores, legenda, fontes e textos). Ela descreve o que `src/OpenHud.Core/Packages/PauseMenu/PauseMenuPackageReader.cs` lê, chave por chave, com cada tipo, padrão, limite e a linha de log de cada entrada rejeitada. Um guia passo a passo com um exemplo completo está em [criando um pacote de menu de pausa](../guides/making-a-pause-menu-package.md); o que acontece quando não há pacote está em [pacotes por mapa](../concepts/per-map-packages.md).
@@ -115,9 +115,9 @@ Um valor de símbolo é um destes:
 | `symbol` | nenhum | O símbolo do mapa no cabeçalho do menu. |
 | `symbol.<theme>` | `symbol` | O símbolo para um tema (`green`, `dark` ...). `<theme>` tem de 1 a 32 caracteres de `a-z 0-9 _ -`; qualquer outra coisa é descartada: `invalid theme name`. |
 | `symbol.openomsi` | `symbol` | O símbolo para o leiaute do openHUD. |
-| `stop_icon` | `@simple` | O ícone de uma parada no mapa. |
-| `marker_icon.<kind>` | o ícone embutido | O ícone de um tipo de marcador (`station`, `terminal` ...). Um tipo inválido: `invalid marker kind`. |
-| `mode_icon.<mode>` | o ícone embutido | O ícone de uma aba de modo de veículo. `<mode>` é `bus`, `tram`, `metro` ou `rail`; outro nome é ignorado sem mensagem. |
+| `stop_icon` | `@simple` | O ícone de uma parada: desenhado no lugar do ponto em todo marcador do mapa que não tem imagem própria (no radar e na página Mapa), e na linha da legenda do tipo `stop` quando `marker_icon.stop` está ausente. |
+| `marker_icon.<kind>` | a amostra de cor | O ícone de um tipo de marcador (`station`, `terminal` ...): desenhado no lugar da amostra na linha da legenda desse tipo. Um tipo inválido: `invalid marker kind`. |
+| `mode_icon.<mode>` | nenhum | O ícone de um modo de veículo: desenhado no início das linhas da página Linhas para as linhas desse modo. `<mode>` é `bus`, `tram`, `metro` ou `rail`; outro nome é ignorado sem mensagem. |
 | `theme` | `blue` | O nome do tema padrão (`a-z 0-9 _ -`, até 32). Um nome inválido: `invalid theme name; default used`. |
 | `layout` | `classic` | `classic` ou `openhud`. Outro valor: `layout must be classic or openhud; default used`. |
 
@@ -128,10 +128,10 @@ Uma cor é `#rrggbb` ou `#rrggbbaa` (alfa direto), em qualquer caixa. Um valor i
 
 | Chave | Padrão | Significado |
 | --- | --- | --- |
-| `color.line` | a do tema | A cor das linhas do mapa. |
-| `color.brt` | a do tema | A cor do grupo de ônibus de trânsito rápido (BRT). |
-| `color.accent` | a do tema | A cor de destaque do menu. |
-| `color.group.<id>` | a do tema | A cor de um grupo de linhas. `<id>` tem de 1 a 32 caracteres de `a-z 0-9 _ -`; qualquer outra coisa: `invalid group id`. |
+| `color.line` | a do tema | A cor das vias no radar e no mapa, e das linhas do menu. |
+| `color.brt` | o destaque | A cor das linhas que o manifesto do realmap lista em `brt_lines`, na página Linhas. |
+| `color.accent` | a do tema | A cor de destaque do menu; também o destaque, a rota e a etiqueta de linha do radar. |
+| `color.group.<id>` | a do tema | A cor de um grupo de linhas (as linhas desse grupo na página Linhas, a amostra da legenda desse tipo). `<id>` tem de 1 a 32 caracteres de `a-z 0-9 _ -`; qualquer outra coisa: `invalid group id`. |
 
 <a id="pictures"></a>
 ### Imagens
@@ -141,7 +141,7 @@ Uma imagem é validada apenas pelo seu cabeçalho e pelo seu tamanho; ela é dec
 | Formato | Limites e verificações |
 | --- | --- |
 | PNG | No máximo 2 MiB; no máximo 2048 x 2048 pixels; uma assinatura e um chunk de cabeçalho válidos (a soma de verificação do cabeçalho é conferida), uma combinação válida de tipo de cor e profundidade de bits, métodos de compressão, filtro e entrelaçamento padrão. Mensagens: `larger than 2 MiB`, `too short to be a PNG`, `not a PNG (signature)`, `PNG header chunk missing`, `PNG header checksum mismatch`, `PNG is 3000x10, the limit is 2048x2048`, `PNG colour type/bit depth combination is invalid`, `PNG compression/filter/interlace method unknown`. |
-| SVG | No máximo 256 KiB, UTF-8 válido, um elemento raiz `<svg` (só uma declaração XML e comentários podem vir antes dele, então um arquivo que começa com um `DOCTYPE` resulta em `no <svg> root element`). O subconjunto estático: sem `<script`, `<foreignobject`, `<!doctype`, `<!entity`, `<iframe`, `<image`, `<embed`, `<object`, `javascript:`, `@import` ou `<?xml-stylesheet`; todo `href` e todo `url(...)` deve apontar para um `#id` interno; sem atributo de evento `on...=`. Mensagem: `contains '<script', which the static subset does not allow`, `external reference (href)`, `external reference (url())`, `event handler attribute`, `no <svg> root element`. |
+| SVG | No máximo 256 KiB, UTF-8 válido, um elemento raiz `<svg` (uma declaração XML, comentários e uma marca de ordem de bytes podem vir antes dele; um `DOCTYPE` não). O subconjunto estático: sem `<script`, `<foreignobject`, `<!doctype`, `<!entity`, `<iframe`, `<image`, `<embed`, `<object`, `javascript:`, `@import` ou `<?xml-stylesheet`; todo `href` e todo `url(...)` deve apontar para um `#id` interno; sem atributo de evento `on...=`. Mensagens: `a DOCTYPE declaration is refused (it can define entities and load external files); remove the <!DOCTYPE ...> line`, `contains '<script', which the static subset does not allow`, `external reference (href)`, `external reference (url())`, `event handler attribute`, `no <svg> root element (only an XML declaration and comments may come before it)`. |
 | Qualquer outra coisa | `only PNG and SVG pictures are read` |
 
 Outras mensagens para um valor de símbolo: `pictures live directly in symbols/` (o caminho não é `symbols/<file>`), `file not found in symbols/ (or beyond the folder limit)`, `unsafe path: <reason>`.
@@ -150,15 +150,43 @@ Outras mensagens para um valor de símbolo: `pictures live directly in symbols/`
 
 **Pares de alta resolução.** Para uma imagem `symbols/name.png`, o leitor procura também `symbols/name@2x.png` (a mesma extensão) e, se ele for válido, o mantém junto à imagem para uma escala de interface alta. Um par que falha é descartado sob o seu próprio nome (`symbols/name@2x.png`) e a imagem principal permanece.
 
+<a id="the-svg-subset"></a>
+### O subconjunto de SVG
+
+Um SVG que passa nas verificações acima é convertido, na thread de trabalho quando os pacotes do mapa são carregados, nas formas do protocolo de cena (retângulos, círculos, linhas e polígonos), ajustado ao espaço com a sua proporção mantida. Nada é rasterizado; a camada de desenho não precisa de nada para isso. O conversor é mais estrito do que as verificações: recusa o arquivo inteiro pelo que não deve ler, ignora o que não consegue desenhar e impõe limites rígidos.
+
+| | O que faz |
+| --- | --- |
+| Desenhado | `svg` (com `viewBox`, ou `width` e `height`), `g`, `a`, `rect` (com `rx`, `ry`), `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path` com `M L H V C S Q T A Z` na forma absoluta e relativa |
+| Propriedades | `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `stroke-linecap` (round ou butt), `color` (para `currentColor`), também num atributo `style`; herdadas pelos grupos, as opacidades se multiplicam |
+| Transformações | `translate`, `scale`, `rotate` (com centro), `skewX`, `skewY`, `matrix`, num grupo ou numa forma, no máximo 16 por atributo |
+| Cores | `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()` e `rgba()` (números ou porcentagens), `none`, `transparent`, `currentColor` e cerca de sessenta cores nomeadas |
+| Ignorado com um motivo | `use`, `filter` e o atributo `filter`, `mask`, `clipPath`, `pattern`, gradientes (um `fill="url(#id)"` é nenhum), `text`, `marker`, `symbol`, `switch`, `svg` aninhado, animação; `display="none"` e elementos ocultos simplesmente não são desenhados |
+| Recusado por inteiro | `script`, `style`, `foreignObject`, `iframe`, `embed`, `object`, `image`; um `DOCTYPE` ou uma entidade; uma referência externa em `href` ou `url()`; um atributo de evento; um `xml-stylesheet`; XML malformado |
+
+Curvas e arcos são achatados em polilinhas dentro de 0,15 % do maior lado da caixa de visualização, com no máximo 48 segmentos por curva e 64 por arco. Cada subcaminho de um caminho vira um polígono, preenchido por conta própria, então um furo num caminho (`fill-rule="evenodd"`) é preenchido; desenhe um furo como uma forma separada na cor do fundo se precisar de um. Tracejados são desenhados contínuos. Um caminho com erro nos dados é desenhado até o erro.
+
+| Limite | Valor |
+| --- | --- |
+| Arquivo | 256 KiB |
+| Elementos / profundidade de aninhamento | 2,000 / 32 |
+| Atributos em um elemento | 64 |
+| Números | no máximo 40 caracteres, valor absoluto no máximo 1,000,000; `NaN` e infinitos são erros |
+| Pontos após o achatamento | 4,000 num desenho e 1,500 numa forma para o símbolo e as duas marcas, 600 e 300 para cada ícone |
+| Comandos de cena por desenho | 160 para o símbolo e as duas marcas, 32 para cada ícone (parada, tipo de marcador, modo); mais que isso e o desenho é recusado com `needs more than N drawing commands (the per-symbol budget); simplify the drawing` |
+| Imagens de um pacote | 24 PNGs no total; 16 tipos de marcador e 16 modos |
+
+Um desenho recusado é substituído pela marca genérica do seu espaço e o motivo vai para o log, por exemplo `symbols/stop.svg (stop_icon): needs more than 32 drawing commands ...; the generic mark is drawn`. As partes ignoradas são listadas (as primeiras) no mesmo log.
+
 <a id="the-two-marks"></a>
 ### As duas marcas
 
 | Arquivo | Finalidade | Alternativa quando ausente ou inválido |
 | --- | --- | --- |
-| `symbols/omsi2-logo.png` | O logotipo do OMSI 2. O openHUD não inclui nenhuma cópia do logotipo de marca registrada. | o `symbol` do pacote, depois a marca genérica `@omsi2`, depois o texto "OMSI 2" |
-| `symbols/openomsi.png` | A marca do openOMSI. | nenhuma |
+| `symbols/omsi2-logo.png` ou `.svg` | O logotipo do OMSI 2, à direita do cabeçalho do menu. O openHUD não inclui nenhuma cópia do logotipo de marca registrada. | o `symbol` do pacote, depois uma etiqueta neutra com contorno e um volante (o openHUD não escreve texto de marca) |
+| `symbols/openomsi.png` ou `.svg` | A marca do openOMSI, ao lado. | nenhuma |
 
-Ambas seguem as regras de imagem (somente PNG para esses nomes). O autor do pacote é responsável pelo direito de usar o logotipo no pacote ([fontes, símbolos e licenciamento](../concepts/fonts-symbols-and-licensing.md)).
+Ambas seguem as regras de imagem; quando existem um `.png` e um `.svg`, o PNG é usado. O autor do pacote é responsável pelo direito de usar o logotipo no pacote ([fontes, símbolos e licenciamento](../concepts/fonts-symbols-and-licensing.md)).
 
 <a id="fonts"></a>
 ## `fonts/`

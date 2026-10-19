@@ -49,18 +49,18 @@ The readers read everything the formats define and validate it. The module in ve
 
 | From | Used in 0.1.0 | Read but not drawn yet |
 | --- | --- | --- |
-| Pause-menu `identity.cfg` | `title` (and `title.<LANG>`), `symbol` / `symbol.<theme>` / `symbol.openomsi` (PNG pictures; the choice follows `theme` and `layout`), `color.accent`, `color.line`, `color.group.<id>`, `legend.<kind>` (and per language) | `stop_icon`, `marker_icon.<kind>`, `mode_icon.<mode>`, `color.brt`; a symbol that is an SVG (it is validated, but the generic mark is drawn) |
-| Pause-menu `symbols/` | The map's symbol picture | `omsi2-logo.png`, `openomsi.png` |
+| Pause-menu `identity.cfg` | `title` (and `title.<LANG>`), `symbol` / `symbol.<theme>` / `symbol.openomsi` (PNG or SVG; the choice follows `theme` and `layout`), `color.accent`, `color.line`, `color.brt`, `color.group.<id>`, `stop_icon`, `marker_icon.<kind>`, `mode_icon.<mode>`, `legend.<kind>` (and per language) | |
+| Pause-menu `symbols/` | The map's symbol, `omsi2-logo` and `openomsi` (PNG or SVG), and the icons the keys above name | |
 | Pause-menu `fonts/` | All five roles, registered with the draw layer | |
 | Pause-menu `strings/` | The `title` and `legend.<kind>` keys | Other keys |
-| Pause-menu `manifest.cfg` | `format`, `name` (for the log) | `author`, `credit` |
+| Pause-menu `manifest.cfg` | `format`, `name` (for the log), `credit` (the footer of the pause menu) | `author` |
 | Realmap `surface.oms` | Fills, rivers, rails, borders, contour lines, streets (at close zoom), place labels | Street names and speed limits, which are read (`StreetAt`) but not shown yet |
 | Realmap `markers.cfg`, `icons/` | The markers with their icons (PNG, up to 128 pixels, 48 pictures) | |
 | Realmap `regions.cfg` | The names with a readable label box, as faint watermarks | The "you are in" lookup |
 | Realmap `lines.lin` | The lines valid on the session's date, on the Lines page | Routes and stops on the map |
-| Realmap `manifest.cfg` | `grid`, `north` | Colors (`water`, `green`, ...), `player*`, `brt_lines`, `*_vehicles`, `alignment`, `credit` |
+| Realmap `manifest.cfg` | `grid`, `north`, the dark colors (`land`, `water`, `river`, `green`, `grass`, `forest`, `sport`, `farm`, `built`, `rail`, `rail_edge`, `border`, `contour`), `player` (`triangle`), `player_free`, `brt_lines` (the color of those lines on the Lines page) | `player_line`, `player_brt` (they need the player's active line), `light_*` colors, `*_vehicles`, `alignment`, `credit` |
 
-The radar's colors are the module's own, except the accent and the line color that the pause-menu package may set.
+Where a package says nothing, the radar's colors are the module's own. The pause-menu package's accent also colors the route and the line chip, its line color the roads; the realmap manifest's colors replace the radar's land, water, green, built-up and contour colors, and paint rivers, rails (with an edge), borders and the kinds of green by class. The package's icons draw as follows: `stop_icon` in place of the dot of every marker that has no picture of its own (on the radar and the map) and in the legend row of the `stop` kind; `marker_icon.<kind>` in the legend row of that kind; `mode_icon.<mode>` at the start of the rows of the Lines page. PNG pictures and SVG drawings are interchangeable in every slot.
 
 
 ## Caching and change

@@ -1,6 +1,6 @@
 # Criando um pacote de menu de pausa para o seu mapa
 
-<!-- l10n: source=guides/making-a-pause-menu-package.md source-sha256=aac778b9c043adaefc12a66ebcfd18f4968e5c937b64d2fc00144a1b19807a76 -->
+<!-- l10n: source=guides/making-a-pause-menu-package.md source-sha256=99c4a0b1ef56dae2eb4d55cedbdf9fe36802a1b03010855b4e42951498a43136 -->
 > Tradução da [página original em inglês](../../guides/making-a-pause-menu-package.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Este guia leva o autor de um mapa de uma pasta vazia até um pacote `openomsi-pausemenu` pronto, passo a passo, com um exemplo completo em que todo arquivo de texto é mostrado aqui por inteiro. O exemplo é verificado pela suíte de testes: os arquivos abaixo são lidos com o mesmo leitor que o módulo usa e não devem gerar nenhuma entrada rejeitada ([cobertura de testes](../status/test-coverage.md)). O formato em si, chave por chave, está na [referência do pacote de menu de pausa](../reference/pause-menu-package.md).
@@ -71,7 +71,7 @@ Você mesmo cria essas imagens; os tamanhos são os do exemplo. Regras para ter 
 - `omsi2-logo.png` e `openomsi.png` são opcionais. O openHUD não inclui nenhuma cópia do logotipo de marca registrada do OMSI 2; se você quiser que ele apareça no menu, você o fornece aqui e é responsável por ter o direito de fazê-lo ([licenciamento](../concepts/fonts-symbols-and-licensing.md)).
 - As fontes são arquivos reais que você obtém com uma licença que permita redistribuição dentro do seu pacote. Nunca copie uma fonte comercial para um pacote.
 
-Os três arquivos SVG abaixo são estáticos e contêm apenas formas. Um SVG não pode conter script, `DOCTYPE`, imagem embutida nem qualquer referência externa; muitos editores adicionam um `DOCTYPE` ao exportar, então remova-o.
+Os cinco arquivos SVG abaixo são estáticos e desenham apenas formas, caminhos e cores lisas. O openHUD os transforma nas formas da cena, então permanecem nítidos em qualquer tamanho e dispensam um PNG. Um SVG não pode conter script, folha de estilo, `DOCTYPE`, imagem embutida nem qualquer referência externa; muitos editores adicionam um `DOCTYPE` ao exportar, então remova-o. O que é desenhado e o que é ignorado está em [o subconjunto de SVG](../reference/pause-menu-package.md#the-svg-subset). Os dois últimos arquivos mostram mais dele: curvas, arcos, comandos relativos, uma transformação de grupo e um atributo `style`.
 
 <a id="openomsi-pausemenusymbolsstopsvg"></a>
 #### `openomsi-pausemenu/symbols/stop.svg`
@@ -103,6 +103,32 @@ Os três arquivos SVG abaixo são estáticos e contêm apenas formas. Um SVG nã
   <rect x="5" y="3" width="14" height="15" rx="3" fill="#ffffff"/>
   <rect x="7" y="6" width="10" height="5" fill="#24589a"/>
   <path d="M8 21 L12 18 L16 21" fill="none" stroke="#ffffff" stroke-width="2"/>
+</svg>
+```
+
+<a id="openomsi-pausemenusymbolsmode-metrosvg"></a>
+#### `openomsi-pausemenu/symbols/mode-metro.svg`
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M12 3 C7 3 4 6 4 10 V17 H6 L4 20 H8 L9.5 18 H14.5 L16 20 H20 L18 17 H20 V10 C20 6 17 3 12 3 Z" fill="#ffffff"/>
+  <rect x="6" y="7" width="12" height="5" rx="1" fill="#24589a"/>
+  <circle cx="8.5" cy="15" r="1" fill="#24589a"/>
+  <circle cx="15.5" cy="15" r="1" fill="#24589a"/>
+</svg>
+```
+
+<a id="openomsi-pausemenusymbolsmode-railsvg"></a>
+#### `openomsi-pausemenu/symbols/mode-rail.svg`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A rail icon: arcs, relative commands, a group transform and a style attribute -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <g transform="translate(12 12) scale(0.9)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round">
+    <path d="M-9 8 h18 M-6 8 v-5 a6 6 0 0 1 12 0 v5"/>
+    <path d="M-9 12 q9 -4 18 0" style="stroke:#24589a"/>
+  </g>
 </svg>
 ```
 
@@ -144,6 +170,8 @@ marker_icon.terminal = symbols/terminal.png
 marker_icon.garage = @simple
 mode_icon.bus = symbols/mode-bus.svg
 mode_icon.tram = symbols/mode-tram.svg
+mode_icon.metro = symbols/mode-metro.svg
+mode_icon.rail = symbols/mode-rail.svg
 
 # Legend texts, with the language variants
 legend.station = Station
@@ -266,6 +294,8 @@ openomsi-pausemenu\
     stop.svg
     mode-bus.svg
     mode-tram.svg
+    mode-metro.svg
+    mode-rail.svg
   fonts\
     fonts.cfg
     FONTS-LICENSE.txt
@@ -286,7 +316,7 @@ Não há um programa verificador separado: o próprio leitor do módulo é a ver
 2. Todo arquivo `.cfg` é texto UTF-8 de no máximo 64 KiB, com linhas `key = value`.
 3. Nenhuma chave aparece duas vezes em um arquivo (a segunda é descartada).
 4. Todo caminho de imagem começa com `symbols/`, usa `/` e existe diretamente em `symbols`.
-5. Toda imagem é um PNG de no máximo 2048 x 2048 e 2 MiB, ou um SVG de no máximo 256 KiB sem script, `DOCTYPE`, imagem embutida nem referência externa.
+5. Toda imagem é um PNG de no máximo 2048 x 2048 e 2 MiB, ou um SVG de no máximo 256 KiB sem script, folha de estilo, `DOCTYPE`, imagem embutida nem referência externa, e dentro do seu orçamento de formas (160 para o símbolo e as duas marcas, 32 para um ícone).
 6. `symbols` contém no máximo 64 arquivos e 16 MiB.
 7. Toda cor é `#rrggbb` ou `#rrggbbaa`.
 8. Se `fonts` contém um arquivo de fonte: `fonts.cfg` e um `FONTS-LICENSE.txt` não vazio existem; toda fonte é um arquivo TrueType ou OpenType estático de no máximo 4 MiB; no máximo 12 arquivos.

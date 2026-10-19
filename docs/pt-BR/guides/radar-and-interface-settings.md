@@ -1,6 +1,6 @@
 # Configurações do radar e da interface, com um exemplo de cada
 
-<!-- l10n: source=guides/radar-and-interface-settings.md source-sha256=b1abff050ab12ad3bb456f59b0004b8a73d3648e1e4c48416efad0ecd0c458a9 -->
+<!-- l10n: source=guides/radar-and-interface-settings.md source-sha256=d87299cc04d146dcd66cbf3829aefabc9ff9fff2f483acfd44b76388a634b6aa -->
 > Tradução da [página original em inglês](../../guides/radar-and-interface-settings.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Este guia percorre as nove configurações do openHUD, uma a uma, com um exemplo completo para cada: o que escrever, onde e o que você vê. Cada exemplo funciona como flag de linha de comando para uma sessão, como linha em `modules.ini` para todas as sessões e como entrada em um preset de perfil de sessão ([ativando o módulo](enabling-the-module.md), [perfis de sessão](session-profiles.md)). A tabela completa com tipos, limites e padrões é a [referência de configurações](../reference/settings.md).
@@ -77,13 +77,18 @@ OmsiLaunch.exe /runtime:module.openhud.radar.zoom /runtime-arg:direction=out
 <a id="units"></a>
 ## Unidades
 
-`units` (`metric` ou `imperial`, padrão `metric`) é o sistema de unidades para velocidade e distância no HUD:
+`units` (`metric` ou `imperial`, padrão `metric`) é o sistema de unidades para velocidade e distância no HUD. A faixa sob o radar mostra a sua velocidade à esquerda, e a escala do radar e da página Mapa segue o mesmo sistema:
 
 ```text
 OmsiLaunch.exe /new /map:"maps\Example City\global.cfg" /entrypoint-index:1 /module:openhud /module-setting:openhud.units=imperial
 ```
 
-Na versão 0.1.0, nada do que o módulo desenha é uma velocidade ou uma distância em uma unidade que dependa desta configuração: o rótulo de escala do radar está em metros e quilômetros, e a faixa mostra o relógio. O valor é aceito, validado e informado por `status` (`units`), e os textos para as unidades imperiais já existem (`UI_UNIT_MPH`, `UI_UNIT_FT`, `UI_UNIT_MI`); assim, um perfil pode defini-lo agora e ele passa a valer quando o HUD mostrar velocidade ([limitações conhecidas](../reference/known-limitations.md)).
+| `units` | Velocidade | Escala do radar | Barra de escala da página Mapa |
+| --- | --- | --- | --- |
+| `metric` | `47 km/h` | `100 m` ... `3.2 km` | metros e quilômetros |
+| `imperial` | `29 mph` | `330 ft` ... `2 mi` | pés e milhas |
+
+As palavras das unidades vêm do idioma da interface (`UI_UNIT_KMH`, `UI_UNIT_MPH`, `UI_UNIT_M`, `UI_UNIT_KM`, `UI_UNIT_FT`, `UI_UNIT_MI`). A velocidade é o `ground_speed` do jogo lido como metros por segundo; essa unidade é inferida e será confirmada na rodada em tempo de execução, então, se o número na faixa estiver errado por um fator constante, é o primeiro lugar para olhar ([limitações conhecidas](../reference/known-limitations.md)). O valor também é informado por `status` (`units`).
 
 <a id="language"></a>
 ## Idioma

@@ -1,6 +1,6 @@
 # Compatibilidade e capacidades
 
-<!-- l10n: source=reference/compatibility.md source-sha256=a243b8d98de923595a0c4d71d690f63fa743ed6177999eab8df99e2c39cd60b0 -->
+<!-- l10n: source=reference/compatibility.md source-sha256=3966682382bbb773b78e8ab680c8ebacf4e619507ed2e2c90a7a4e479f393377 -->
 > Tradução da [página original em inglês](../../reference/compatibility.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Esta página diz em que o openHUD roda e o que ele precisa do OmsiLaunch: o protocolo do bridge, os recursos do bridge que ele exige, as capacidades que usa ou dispensa, as operações que executa e o que faz quando uma delas não está disponível. O sistema de capacidades é do OmsiLaunch (a referência de capacidades dele as lista por build do OMSI); esta página diz o que cada uma significa para o openHUD.
@@ -56,7 +56,7 @@ Declaradas no manifesto (`runtime_operations`), executadas no processo, na threa
 | `time.read` | O relógio na faixa do radar; a data que seleciona as linhas | A faixa fica sem relógio; todas as linhas são listadas |
 | `map.read` | Qual mapa está em jogo (e a busca de pacotes) | Nenhum pacote é carregado; o radar desenha sem mapa |
 | `map.tiles.list` | A tabela de tiles que coloca os veículos na grade do mapa | A posição do jogador não é resolvida; o radar espera (`the player's tile is not in the map's tile table`) |
-| `player-vehicle.read` | Onde você está e sua direção | Sem radar (`no player vehicle` / `player unreadable`) |
+| `player-vehicle.read` | Onde você está, sua direção e sua velocidade | Sem radar (`no player vehicle` / `player unreadable`) |
 | `road-vehicles.list`, `road-vehicle.read` | Os veículos ao seu redor | Sem veículos no radar |
 | `camera.read`, `timetable.read`, `weather.read` | Lidas para o snapshot | Essa parte fica indisponível |
 | `ui.pause.state`, `ui.pause.take-over`, `ui.pause.restore-native`, `ui.pause.action` | O menu de pausa | O menu de pausa usa a alternativa; veja [o menu de pausa](../concepts/the-pause-menu.md#when-something-fails) |

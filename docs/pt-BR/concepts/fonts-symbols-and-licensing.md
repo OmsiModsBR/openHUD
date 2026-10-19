@@ -1,6 +1,6 @@
 # Fontes, símbolos e licenciamento
 
-<!-- l10n: source=concepts/fonts-symbols-and-licensing.md source-sha256=5b14129f8f1f1e37fba39f32cfac8b558c6e983ac6e4db23064ecc577f09ce8a -->
+<!-- l10n: source=concepts/fonts-symbols-and-licensing.md source-sha256=c54209c07e15800a87fb7970a02f6596f8c73d0f2fbac5637620b74b9581b21a -->
 > Tradução da [página original em inglês](../../concepts/fonts-symbols-and-licensing.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O openHUD não traz nenhum arquivo de fonte nem logotipo de marca próprio. Qualquer tipografia, símbolo ou logotipo que o menu de um mapa mostre vem do pacote de menu de pausa do mapa, e quem faz o pacote é responsável pelo direito de distribuí-lo. Esta página explica o que o módulo faz com fontes e imagens, o que ele verifica e o que deixa para o autor, e como o texto é desenhado quando uma fonte está ausente ou não tem um caractere.
@@ -43,7 +43,7 @@ A camada de desenho pede ao GDI do Windows que rasterize cada glifo uma vez, no 
 | Tipo | O que acontece |
 | --- | --- |
 | Símbolo PNG | Validado pelo cabeçalho e pelo tamanho, depois decodificado na thread do worker (no máximo 512 pixels no maior lado após a redução) e registrado na camada de desenho como pixels brutos. |
-| Símbolo SVG | Validado contra o subconjunto estático (sem scripts, sem `DOCTYPE`, sem imagens incorporadas, sem referências externas). O módulo não rasteriza SVG nesta versão: desenha a marca genérica no lugar. |
+| Símbolo SVG | Validado contra o subconjunto estático (sem scripts, sem `DOCTYPE`, sem folhas de estilo, sem imagens incorporadas, sem referências externas) e depois transformado em formas do protocolo de cena na thread de trabalho. Nada é rasterizado e a camada de desenho não precisa de nada novo. Um desenho que não cabe no subconjunto ou no seu orçamento é substituído pela marca genérica, com o motivo no log ([o subconjunto de SVG](../reference/pause-menu-package.md#the-svg-subset)). |
 | `@omsi2`, `@simple`, `@none` | Desenhados pelo próprio openHUD. |
 | Ícones do realmap | PNG, até 1024 x 1024 no pacote; reduzidos a no máximo 128 pixels; no máximo 48 imagens distintas. |
 

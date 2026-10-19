@@ -68,13 +68,18 @@ OmsiLaunch.exe /runtime:module.openhud.radar.zoom /runtime-arg:direction=out
 
 ## Units
 
-`units` (`metric` or `imperial`, default `metric`) is the system of units for speed and distance on the HUD:
+`units` (`metric` or `imperial`, default `metric`) is the system of units for speed and distance on the HUD. The strip under the radar shows your speed on its left, and the scale of the radar and of the map page follows the same system:
 
 ```text
 OmsiLaunch.exe /new /map:"maps\Example City\global.cfg" /entrypoint-index:1 /module:openhud /module-setting:openhud.units=imperial
 ```
 
-In version 0.1.0 nothing the module draws is a speed or a distance in a unit that depends on this setting: the radar's scale label is in meters and kilometers, and the strip shows the clock. The value is accepted, validated and reported by `status` (`units`), and the texts for imperial units already exist (`UI_UNIT_MPH`, `UI_UNIT_FT`, `UI_UNIT_MI`), so a profile can set it now and it takes effect when the HUD shows speed ([known limitations](../reference/known-limitations.md)).
+| `units` | Speed | Radar scale | Map page scale bar |
+| --- | --- | --- | --- |
+| `metric` | `47 km/h` | `100 m` ... `3.2 km` | meters and kilometers |
+| `imperial` | `29 mph` | `330 ft` ... `2 mi` | feet and miles |
+
+The unit words come from the interface language (`UI_UNIT_KMH`, `UI_UNIT_MPH`, `UI_UNIT_M`, `UI_UNIT_KM`, `UI_UNIT_FT`, `UI_UNIT_MI`). The speed is the game's `ground_speed` read as metres per second; that unit is inferred and gets confirmed in the runtime round, so if the number on the strip is off by a constant factor, that is the first place to look ([known limitations](../reference/known-limitations.md)). The value is also reported by `status` (`units`).
 
 ## Language
 

@@ -1,6 +1,6 @@
 # Pacotes por mapa
 
-<!-- l10n: source=concepts/per-map-packages.md source-sha256=1876e3070acf37d54f3a638f4035ed66757ede94a74b1d3c7fa8420c3182a3c3 -->
+<!-- l10n: source=concepts/per-map-packages.md source-sha256=d046f2d535cf6d578129bce0e18d9f6a72ae564f75c28246e973eb881c22cf03 -->
 > Tradução da [página original em inglês](../../concepts/per-map-packages.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O openHUD funciona em qualquer mapa, e pode ficar com a cara do mapa quando este traz dois pacotes opcionais: um pacote **realmap** (uma imagem pré-construída do mapa para o radar e a página de mapa) e um pacote de **menu de pausa** (o título, o símbolo, as cores, a legenda e as fontes do menu de pausa). Esta página explica o que eles são, onde ficam, quem os lê, o que o módulo faz com cada parte e o que acontece quando estão ausentes, parcialmente errados ou hostis. Os formatos estão na [referência do pacote realmap](../reference/realmap-package.md) e na [referência do pacote de menu de pausa](../reference/pause-menu-package.md); como fazê-los está nos guias de [pacotes de menu de pausa](../guides/making-a-pause-menu-package.md) e de [pacotes realmap](../guides/using-a-realmap-package.md).
@@ -56,18 +56,18 @@ Os leitores leem tudo o que os formatos definem e validam. O módulo na versão 
 
 | De | Usado na 0.1.0 | Lido mas ainda não desenhado |
 | --- | --- | --- |
-| `identity.cfg` do menu de pausa | `title` (e `title.<LANG>`), `symbol` / `symbol.<theme>` / `symbol.openomsi` (imagens PNG; a escolha segue `theme` e `layout`), `color.accent`, `color.line`, `color.group.<id>`, `legend.<kind>` (e por idioma) | `stop_icon`, `marker_icon.<kind>`, `mode_icon.<mode>`, `color.brt`; um símbolo que é um SVG (é validado, mas a marca genérica é desenhada) |
-| `symbols/` do menu de pausa | A imagem do símbolo do mapa | `omsi2-logo.png`, `openomsi.png` |
+| `identity.cfg` do menu de pausa | `title` (e `title.<LANG>`), `symbol` / `symbol.<theme>` / `symbol.openomsi` (PNG ou SVG; a escolha segue `theme` e `layout`), `color.accent`, `color.line`, `color.brt`, `color.group.<id>`, `stop_icon`, `marker_icon.<kind>`, `mode_icon.<mode>`, `legend.<kind>` (e por idioma) | |
+| `symbols/` do menu de pausa | O símbolo do mapa, `omsi2-logo` e `openomsi` (PNG ou SVG) e os ícones que as chaves acima nomeiam | |
 | `fonts/` do menu de pausa | Todos os cinco papéis, registrados na camada de desenho | |
 | `strings/` do menu de pausa | As chaves `title` e `legend.<kind>` | Outras chaves |
-| `manifest.cfg` do menu de pausa | `format`, `name` (para o log) | `author`, `credit` |
+| `manifest.cfg` do menu de pausa | `format`, `name` (para o log), `credit` (o rodapé do menu de pausa) | `author` |
 | `surface.oms` do realmap | Preenchimentos, rios, ferrovias, fronteiras, curvas de nível, ruas (em zoom próximo), rótulos de lugares | Nomes de ruas e limites de velocidade, que são lidos (`StreetAt`) mas ainda não mostrados |
 | `markers.cfg` e `icons/` do realmap | Os marcadores com seus ícones (PNG, até 128 pixels, 48 imagens) | |
 | `regions.cfg` do realmap | Os nomes com uma caixa de rótulo legível, como marcas d'água discretas | A consulta "você está em" |
 | `lines.lin` do realmap | As linhas válidas na data da sessão, na página Linhas | Rotas e paradas no mapa |
-| `manifest.cfg` do realmap | `grid`, `north` | Cores (`water`, `green`, ...), `player*`, `brt_lines`, `*_vehicles`, `alignment`, `credit` |
+| `manifest.cfg` do realmap | `grid`, `north`, as cores escuras (`land`, `water`, `river`, `green`, `grass`, `forest`, `sport`, `farm`, `built`, `rail`, `rail_edge`, `border`, `contour`), `player` (`triangle`), `player_free`, `brt_lines` (a cor dessas linhas na página Linhas) | `player_line`, `player_brt` (precisam da linha ativa do jogador), cores `light_*`, `*_vehicles`, `alignment`, `credit` |
 
-As cores do radar são do próprio módulo, exceto o destaque e a cor de linha que o pacote de menu de pausa pode definir.
+Onde um pacote não diz nada, as cores do radar são as do próprio módulo. O destaque do pacote de menu de pausa também colore a rota e a etiqueta da linha, e a sua cor de linha colore as vias; as cores do manifesto do realmap substituem as cores de terreno, água, verde, área construída e curvas de nível do radar, e pintam rios, ferrovias (com borda), fronteiras e os tipos de verde por classe. Os ícones do pacote são desenhados assim: `stop_icon` no lugar do ponto de todo marcador que não tem imagem própria (no radar e no mapa) e na linha da legenda do tipo `stop`; `marker_icon.<kind>` na linha da legenda desse tipo; `mode_icon.<mode>` no início das linhas da página Linhas. Imagens PNG e desenhos SVG são intercambiáveis em todo espaço.
 
 <a id="caching-and-change"></a>
 ## Cache e mudança

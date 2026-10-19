@@ -34,6 +34,7 @@ OmsiLaunch.exe /runtime:module.openhud.status
 | `radar_features`, `fullmap_features` | features in the newest radar window and map window |
 | `fonts_registered`, `images_registered`, `uploads_pending`, `uploads_failed` | what was sent to the draw layer |
 | `pause_menu`, `pause_state` | `off`, `on` or `degraded`; the state machine's state |
+| `map_queries`, `map_builds` | windows of map data asked for from the worker; pause-menu maps built (a hovered menu does not rebuild its map) |
 | `scenes_published`, `scenes_skipped`, `scene_failures` | scenes sent, skipped as unchanged, refused |
 | `ticks`, `tick_last_ms`, `tick_max_ms`, `slow_ticks` | tick count and timings ([performance](../concepts/performance.md)) |
 | `frames_with_problems`, `faults`, `last_fault` | game reads that failed in a tick; contained exceptions and the last one (`area: Type`) |
@@ -88,7 +89,7 @@ Events are named `module.openhud.<name>`, with a JSON object of strings as data.
 | `settings-issue` | A setting was unusable | `issues`: `key=value (reason); ...` |
 | `hooks` | The draw layer installed its Direct3D hooks (native component) | `present`, `reset` (`installed`) |
 | `gameplay-ready` | The world is running | none |
-| `packages` | A map's packages were loaded | `map`, `realmap`, `pausemenu` (status), `fonts`, `images`, `diagnostics` (first lines, at most 700 characters) |
+| `packages` | A map's packages were loaded | `map`, `realmap`, `pausemenu` (status), `fonts`, `images`, `vector_symbols` (SVG drawings from the pause-menu package), `diagnostics` (first lines, the pause-menu package's first, at most 700 characters) |
 | `package-problem` | Loading the packages failed | `detail` |
 | `read-problem` | A part of the game could not be read (each kind once, at most 12) | `problem` |
 | `draw-failed` | The draw layer reported a failure | `detail` |

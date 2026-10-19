@@ -53,7 +53,7 @@ Nothing throws out of a callback. Each piece of a tick runs under a guard; a fau
 ## What each package provides
 
 - `openomsi-realmap` (located by the bridge, `content_inputs`): the cartography (areas, lines, streets with limits, labels), markers with icons, municipalities and transit lines. Read in managed code as untrusted data; the fingerprint is only a cache key.
-- `openomsi-pausemenu` (next to it in the map's folder): the menu's title per language, symbol, accent and line colours, legend texts, strings and fonts. PNG symbols and icons are decoded by a strict decoder (size limits, checksums, no guessing) and sent as RGBA; SVG symbols are not rasterized in this version and the generic mark is used, with the reason logged. Fonts are registered by validated absolute path; no font and no trademark logo ships with the module.
+- `openomsi-pausemenu` (next to it in the map's folder): the menu's title per language, symbol, accent and line colours, legend texts, strings and fonts. PNG symbols and icons are decoded by a strict decoder (size limits, checksums, no guessing) and sent as RGBA; SVG symbols and icons are converted by a hardened subset converter into scene shapes (nothing is rasterized and the draw layer needs nothing new), and a drawing that does not fit is replaced by the generic mark, with the reason logged. Fonts are registered by validated absolute path; no font and no trademark logo ships with the module.
 
 ## Operations of the module
 

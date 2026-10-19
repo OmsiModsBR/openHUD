@@ -1,6 +1,6 @@
 # Desempenho e a divisão entre tick e desenho
 
-<!-- l10n: source=concepts/performance.md source-sha256=9942601277bbeaeda54bb5990953fa2431b91f926467bd0c5d6ccdcba4e87065 -->
+<!-- l10n: source=concepts/performance.md source-sha256=649e734f8842f29b5f1748d16b2b3b70f070141209132dccc50d933c1825f2a7 -->
 > Tradução da [página original em inglês](../../concepts/performance.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O openHUD roda em dois ritmos: um **tick** a cada 50 ms, que lê o jogo e monta uma cena, e um **desenho** a cada quadro, que coloca a última cena na tela. Esta página explica quanto cada um custa, o que é limitado e como, como o módulo protege o jogo do próprio trabalho e como ver os números. Ela descreve o que o código limita; não afirma um custo em taxa de quadros, porque nenhum foi medido ainda em um jogo em execução ([status de validação](../status/validation.md)).
@@ -19,8 +19,8 @@ O que um tick faz, e os limites:
 | Ler o jogo | O relógio e a câmera a cada tick; o veículo do jogador a cada tick; o mapa, o clima e a tabela de horários a cada 20º tick; a tabela de tiles a cada 60º tick (e de imediato quando o tile do jogador é desconhecido, no máximo a cada 10º tick); a lista de veículos a cada 5º tick |
 | Ler os veículos ao seu redor | No máximo 24 chamadas `road-vehicle.read` por tick (primeiro os nunca lidos, depois os mais próximos de você cuja leitura é mais antiga); só são mantidos veículos a até 800 m; no máximo 128 são reportados; um veículo não lido por 40 ticks é descartado |
 | Avançar o menu de pausa | Uma chamada `ui.pause.state` por tick enquanto o jogo não está pausado |
-| Montar o radar | No máximo a cada 100 ms, e só se algo visível mudou (posição a 0,25 m, direção a 1 grau, os veículos, o minuto do relógio, o zoom, novos dados do mapa) |
-| Montar o menu de pausa e o mapa | Só quando o estado do menu ou os dados do mapa mudaram |
+| Montar o radar | No máximo a cada 100 ms, e só se algo visível mudou (posição a um terço de pixel da escala do radar, direção a 1 grau, os veículos, a velocidade mostrada, o minuto do relógio, o zoom, novos dados do mapa); uma montagem que sai igual à cena na tela não é codificada nem enviada |
+| Montar o menu de pausa e o mapa | O menu quando o seu estado mudou; o mapa sob ele só quando a vista, a janela de dados, o jogador, os veículos ou as linhas mudaram, então um menu apenas sob o ponteiro reaproveita o mapa e os seus comandos codificados |
 | Enviar imagens e fontes à camada de desenho | Um orçamento de 6 ms por tick; o restante espera o próximo tick |
 | Carregar um pacote | Em uma thread de trabalho, nunca no tick |
 | Ler dados do mapa | Em uma thread de trabalho: o tick pede uma janela e continua desenhando a anterior até a nova ficar pronta |
@@ -41,7 +41,9 @@ O núcleo nunca produz mais do que a camada de desenho aceita:
 
 Quando uma janela contém mais do que o orçamento, o construtor mantém os elementos mais visíveis (grandes na tela, de camadas importantes: primeiro vias, depois água, áreas construídas, áreas verdes, relevo) e descarta o resto; a escolha é determinística, então a mesma entrada desenha a mesma imagem. A geometria é recortada para a janela visível e os pontos que não acrescentam detalhe visível são descartados antes de serem contados no orçamento.
 
-O módulo só envia uma cena se ela for diferente da última enviada. Um radar estático não custa nada além da verificação.
+O módulo só envia uma cena se ela for diferente da última enviada: compara um hash dos comandos, então uma cena inalterada não é codificada nem enviada. Um radar estático não custa nada além da verificação. Elementos fora da vista são descartados pela sua caixa delimitadora antes de qualquer ponto ser projetado, os construtores reaproveitam as suas listas de trabalho entre montagens, e as verificações por que uma cena passa (`SceneBuilder`, o codificador) não alocam nada para um comando válido; com isso uma montagem do radar aloca cerca de 0,45 MiB em vez de 1,5 MiB, e o coletor de lixo roda bem menos no tick.
+
+Os dados do pacote são lidos uma janela por vez na thread de trabalho. A janela ao seu redor tem cerca de o dobro do raio mostrado (no mínimo 600 m) e só é pedida de novo quando a vista sai dela, então uma viagem por uma janela pede uma vez (`map_queries` em `status`).
 
 <a id="the-draw"></a>
 ## O desenho
@@ -50,6 +52,7 @@ A camada de desenho faz hook de `Present` e `Reset` do dispositivo do jogo por m
 
 - **Nunca espera.** Se um `Reset` ou uma parada detém o bloqueio quando `Present` chega, aquele quadro é pulado.
 - **Agrupa.** Os triângulos são reunidos em poucas chamadas de desenho; os glifos vêm de um atlas de textura com substituição do menos recentemente usado, então o atlas permanece limitado.
+- **Tessela uma cena uma vez.** Uma cena é desenhada a cada `Present` mas substituída algumas vezes por segundo; por isso os comandos viram triângulos uma só vez, quando uma cena é desenhada pela primeira vez, e os mesmos lotes são repetidos até que algo de que dependem mude: uma nova cena, uma imagem colocada ou removida, uma fonte registrada, outro tamanho de vista ou dispositivo, um `Reset` do dispositivo. Um quadro incompleto (uma imagem ainda ausente, um glifo que não coube, uma célula do atlas reutilizada durante o desenho) não é guardado. `stats` informa `tessellations` e `replays`. Um recorte circular, que o radar usa, testa cada triângulo contra o círculo antes do recorte geral, o que tornou uma nova cena do radar cerca de cinco vezes mais barata de tesselar.
 - **Restaura o que altera.** O estado do Direct3D que ela define é salvo e restaurado; também funciona quando chamada dentro da própria cena do jogo.
 - **Backends de software e de hardware.** A mesma cena é rasterizada por um backend de software (usado pelos testes) e pelo backend Direct3D 9, e um teste os compara.
 - **Memória.** As imagens são limitadas a 128 e a 4 MiB cada uma, 32 MiB no total.
@@ -66,11 +69,12 @@ A camada de desenho faz hook de `Present` e `Reset` do dispositivo do jogo por m
 | `tick_last_ms`, `tick_max_ms` | Duração do último tick e do mais longo, em ms |
 | `slow_ticks` | Ticks que levaram mais de 40 ms |
 | `scenes_published`, `scenes_skipped`, `scene_failures` | Cenas enviadas, puladas porque nada mudou e recusadas pela camada de desenho |
+| `map_queries`, `map_builds` | Janelas de dados do mapa pedidas; mapas montados para o menu de pausa |
 | `native_calls`, `native_failures` | Chamadas à camada de desenho e quantas falharam |
 | `uploads_pending`, `fonts_registered`, `images_registered` | Imagens e fontes em espera e registradas |
 | `frames_with_problems` | Ticks em que parte do jogo não pôde ser lida |
 
-Os contadores da própria camada de desenho (cenas, comandos, triângulos, chamadas de desenho, quadros pulados, resets do dispositivo, capturas) são a operação `stats` do componente nativo; o módulo os lê a cada 20º tick e age diante de uma falha.
+Os contadores da própria camada de desenho (cenas, comandos, triângulos, chamadas de desenho, tesselações, repetições, quadros pulados, resets do dispositivo, capturas) são a operação `stats` do componente nativo; o módulo os lê a cada 20º tick e age diante de uma falha.
 
 <a id="what-costs-the-most-and-what-to-do"></a>
 ## O que custa mais, e o que fazer

@@ -94,7 +94,7 @@ If the pause menu keeps failing (five faults in a row, five scenes that cannot b
 | Map | The whole map, north up, centered on you; you pan and zoom it. It uses the realmap package when there is one. |
 | Lines | The lines of the map that run on the session's date, one row each (number, name, color). Selecting a row has no further effect in 0.1.0. |
 
-The header shows the map's title and symbol; the footer shows a hint with the keys. The text of the menu comes from the interface language ([internationalization](internationalization.md)); the title, the symbol, the accent color, the line color and the legend come from the map's pause-menu package, or are the generic ones.
+The header shows the map's title and symbol (a picture or an SVG drawing) and, at the right, the OMSI 2 mark and the openOMSI mark when the package carries them (otherwise a neutral tag); the legend shows the package's icon of each marker kind in place of the swatch; the Lines page shows the package's icon of the line's mode; the footer shows a hint with the keys on the left and, on the right, the versions of openHUD and OMSI and, when the package has one, its credit. The text of the menu comes from the interface language ([internationalization](internationalization.md)); the title, the symbol, the accent color, the line color and the legend come from the map's pause-menu package, or are the generic ones.
 
 ## Size and the mouse
 

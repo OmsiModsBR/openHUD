@@ -1,6 +1,6 @@
 # Arquitetura
 
-<!-- l10n: source=architecture.md source-sha256=424ab392ca2eacd6b3f4515a977c9e7f365b469ee418f7b25d6705492ba87989 -->
+<!-- l10n: source=architecture.md source-sha256=42b90556c67e216e3333bc79de0039a8c2e534dd08f15b9e7f0a758c78c38af2 -->
 > Tradução da [página original em inglês](../architecture.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 O openHUD é um Runtime Module do OmsiLaunch (bridge protocol 3). Ele lê o jogo apenas pelas operações de catálogo do OmsiLaunch, decide em código gerenciado o que desenhar e entrega o resultado a uma pequena camada nativa que o rasteriza no dispositivo Direct3D 9 do jogo. Status: construído e testado offline contra um bridge falso; ainda não executado no OMSI.
@@ -62,7 +62,7 @@ Nada lança exceção para fora de um callback. Cada parte de um tick roda sob u
 ## O que cada pacote fornece
 
 - `openomsi-realmap` (localizado pelo bridge, `content_inputs`): a cartografia (áreas, linhas, ruas com limites, rótulos), marcadores com ícones, municípios e linhas de transporte. Lido em código gerenciado como dado não confiável; a impressão digital é apenas uma chave de cache.
-- `openomsi-pausemenu` (ao lado dele, na pasta do mapa): o título do menu por idioma, o símbolo, as cores de destaque e de linha, os textos da legenda, as strings e as fontes. Símbolos e ícones PNG são decodificados por um decodificador estrito (limites de tamanho, checksums, sem adivinhação) e enviados como RGBA; símbolos SVG não são rasterizados nesta versão e a marca genérica é usada, com o motivo registrado no log. As fontes são registradas por caminho absoluto validado; nenhuma fonte e nenhum logotipo de marca acompanham o módulo.
+- `openomsi-pausemenu` (ao lado dele, na pasta do mapa): o título do menu por idioma, o símbolo, as cores de destaque e de linha, os textos da legenda, as strings e as fontes. Símbolos e ícones PNG são decodificados por um decodificador estrito (limites de tamanho, checksums, sem adivinhação) e enviados como RGBA; símbolos e ícones SVG são convertidos por um conversor de subconjunto endurecido em formas da cena (nada é rasterizado e a camada de desenho não precisa de nada novo), e um desenho que não cabe é substituído pela marca genérica, com o motivo registrado no log. As fontes são registradas por caminho absoluto validado; nenhuma fonte e nenhum logotipo de marca acompanham o módulo.
 
 <a id="operations-of-the-module"></a>
 ## Operações do módulo

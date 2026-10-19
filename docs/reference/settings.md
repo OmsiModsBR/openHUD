@@ -102,7 +102,7 @@ OmsiLaunch.exe /new /map:"maps\Example City\global.cfg" /entrypoint-index:1 /mod
 
 ### `units`
 
-`metric` or `imperial`, for speed and distance on the HUD. In version 0.1.0 no drawn text depends on it yet (the radar's scale is in meters and kilometers); it is validated and reported by `status` ([known limitations](known-limitations.md)).
+`metric` or `imperial`, for speed and distance on the HUD. Metric shows the speed in km/h and the scales in meters and kilometers; imperial shows mph, feet and miles (the radar's scale reads 330 ft, 660 ft, 0.25 mi, 0.5 mi, 1 mi, 2 mi, and the map page's scale bar uses feet and miles). The speed comes from the vehicle's `ground_speed`, read as metres per second ([known limitations](known-limitations.md)). The effective value is reported by `status`.
 
 ```text
 OmsiLaunch.exe /new /map:"maps\Example City\global.cfg" /entrypoint-index:1 /module:openhud /module-setting:openhud.units=imperial

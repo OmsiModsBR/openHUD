@@ -105,9 +105,9 @@ A symbol value is one of:
 | `symbol` | none | The map's symbol in the menu header. |
 | `symbol.<theme>` | `symbol` | The symbol for one theme (`green`, `dark` ...). `<theme>` is 1 to 32 characters of `a-z 0-9 _ -`; anything else is dropped: `invalid theme name`. |
 | `symbol.openomsi` | `symbol` | The symbol for the openHUD layout. |
-| `stop_icon` | `@simple` | The icon of a stop on the map. |
-| `marker_icon.<kind>` | the built-in icon | The icon of a marker kind (`station`, `terminal` ...). An invalid kind: `invalid marker kind`. |
-| `mode_icon.<mode>` | the built-in icon | The icon of a vehicle-mode tab. `<mode>` is `bus`, `tram`, `metro` or `rail`; another name is ignored without a message. |
+| `stop_icon` | `@simple` | The icon of a stop: drawn in place of the dot at every marker of the map that has no picture of its own (on the radar and on the map page), and in the legend row of the `stop` kind when `marker_icon.stop` is absent. |
+| `marker_icon.<kind>` | the color swatch | The icon of a marker kind (`station`, `terminal` ...): drawn in place of the swatch in the legend row of that kind. An invalid kind: `invalid marker kind`. |
+| `mode_icon.<mode>` | none | The icon of a vehicle mode: drawn at the start of the rows of the Lines page for the lines of that mode. `<mode>` is `bus`, `tram`, `metro` or `rail`; another name is ignored without a message. |
 | `theme` | `blue` | The default theme name (`a-z 0-9 _ -`, up to 32). An invalid name: `invalid theme name; default used`. |
 | `layout` | `classic` | `classic` or `openhud`. Another value: `layout must be classic or openhud; default used`. |
 
@@ -117,10 +117,10 @@ A color is `#rrggbb` or `#rrggbbaa` (straight alpha), in any case. An invalid va
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `color.line` | the theme's | The color of the map's lines. |
-| `color.brt` | the theme's | The color of the bus-rapid-transit group. |
-| `color.accent` | the theme's | The accent color of the menu. |
-| `color.group.<id>` | the theme's | The color of one line group. `<id>` is 1 to 32 characters of `a-z 0-9 _ -`; anything else: `invalid group id`. |
+| `color.line` | the theme's | The color of the roads on the radar and the map, and of the menu's lines. |
+| `color.brt` | the accent | The color of the lines that the realmap manifest lists in `brt_lines`, on the Lines page. |
+| `color.accent` | the theme's | The accent color of the menu; also the radar's accent, route and line chip. |
+| `color.group.<id>` | the theme's | The color of one line group (the lines of that group on the Lines page, the legend swatch of that kind). `<id>` is 1 to 32 characters of `a-z 0-9 _ -`; anything else: `invalid group id`. |
 
 ### Pictures
 
@@ -129,7 +129,7 @@ A picture is validated by its header and its size only; it is decoded later, in 
 | Format | Limits and checks |
 | --- | --- |
 | PNG | At most 2 MiB; at most 2048 x 2048 pixels; a valid signature and header chunk (the header's checksum is verified), a valid color type and bit depth combination, standard compression, filter and interlace methods. Messages: `larger than 2 MiB`, `too short to be a PNG`, `not a PNG (signature)`, `PNG header chunk missing`, `PNG header checksum mismatch`, `PNG is 3000x10, the limit is 2048x2048`, `PNG colour type/bit depth combination is invalid`, `PNG compression/filter/interlace method unknown`. |
-| SVG | At most 256 KiB, valid UTF-8, a root `<svg` element (only an XML declaration and comments may come before it, so a file that starts with a `DOCTYPE` is `no <svg> root element`). The static subset: no `<script`, `<foreignobject`, `<!doctype`, `<!entity`, `<iframe`, `<image`, `<embed`, `<object`, `javascript:`, `@import` or `<?xml-stylesheet`; every `href` and every `url(...)` must point to an internal `#id`; no `on...=` event attribute. Message: `contains '<script', which the static subset does not allow`, `external reference (href)`, `external reference (url())`, `event handler attribute`, `no <svg> root element`. |
+| SVG | At most 256 KiB, valid UTF-8, a root `<svg` element (an XML declaration, comments and a byte order mark may come before it; a `DOCTYPE` may not). The static subset: no `<script`, `<foreignobject`, `<!doctype`, `<!entity`, `<iframe`, `<image`, `<embed`, `<object`, `javascript:`, `@import` or `<?xml-stylesheet`; every `href` and every `url(...)` must point to an internal `#id`; no `on...=` event attribute. Messages: `a DOCTYPE declaration is refused (it can define entities and load external files); remove the <!DOCTYPE ...> line`, `contains '<script', which the static subset does not allow`, `external reference (href)`, `external reference (url())`, `event handler attribute`, `no <svg> root element (only an XML declaration and comments may come before it)`. |
 | Anything else | `only PNG and SVG pictures are read` |
 
 Other messages for a symbol value: `pictures live directly in symbols/` (the path is not `symbols/<file>`), `file not found in symbols/ (or beyond the folder limit)`, `unsafe path: <reason>`.
@@ -138,14 +138,41 @@ Other messages for a symbol value: `pictures live directly in symbols/` (the pat
 
 **High-resolution siblings.** For a picture `symbols/name.png` the reader also looks for `symbols/name@2x.png` (the same extension) and, if it validates, keeps it next to the picture for a high interface scale. A sibling that fails is dropped under its own name (`symbols/name@2x.png`) and the main picture stays.
 
+### The SVG subset
+
+An SVG that passes the checks above is converted, on the worker thread when the map's packages load, into the shapes of the scene protocol (rectangles, circles, lines and polygons), fitted into the slot with its proportion kept. Nothing is rasterized; the draw layer needs nothing for it. The converter is stricter than the checks: it refuses the whole file for what it must not read, skips what it cannot draw, and enforces hard limits.
+
+| | What it does |
+| --- | --- |
+| Drawn | `svg` (with `viewBox`, or `width` and `height`), `g`, `a`, `rect` (with `rx`, `ry`), `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path` with `M L H V C S Q T A Z` in absolute and relative form |
+| Properties | `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `stroke-linecap` (round or butt), `color` (for `currentColor`), also in a `style` attribute; inherited down the groups, opacities multiply |
+| Transforms | `translate`, `scale`, `rotate` (with a center), `skewX`, `skewY`, `matrix`, on a group or a shape, at most 16 per attribute |
+| Colors | `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()` and `rgba()` (numbers or percentages), `none`, `transparent`, `currentColor`, and about sixty named colors |
+| Skipped with a reason | `use`, `filter` and the `filter` attribute, `mask`, `clipPath`, `pattern`, gradients (a `fill="url(#id)"` is none), `text`, `marker`, `symbol`, `switch`, nested `svg`, animation; `display="none"` and hidden elements are simply not drawn |
+| Refused as a whole | `script`, `style`, `foreignObject`, `iframe`, `embed`, `object`, `image`; a `DOCTYPE` or an entity; an external reference in `href` or `url()`; an event attribute; an `xml-stylesheet`; malformed XML |
+
+Curves and arcs are flattened to polylines within 0.15 % of the view box's larger side, with at most 48 segments per curve and 64 per arc. Each sub-path of a path becomes one polygon, filled on its own, so a hole in a path (`fill-rule="evenodd"`) is filled; draw a hole as a separate shape in the background color if you need one. Dashes are drawn solid. A path with an error in its data is drawn up to the error.
+
+| Limit | Value |
+| --- | --- |
+| File | 256 KiB |
+| Elements / nesting depth | 2,000 / 32 |
+| Attributes on one element | 64 |
+| Numbers | at most 40 characters, absolute value at most 1,000,000; `NaN` and infinities are errors |
+| Points after flattening | 4,000 in a drawing and 1,500 in one shape for the symbol and the two marks, 600 and 300 for each icon |
+| Scene commands per drawing | 160 for the symbol and the two marks, 32 for each icon (stop, marker kind, mode); more and the drawing is refused with `needs more than N drawing commands (the per-symbol budget); simplify the drawing` |
+| Pictures from a package | 24 PNGs in all; 16 marker kinds and 16 modes |
+
+A refused drawing is replaced by the generic mark of its slot and the reason is logged, for example `symbols/stop.svg (stop_icon): needs more than 32 drawing commands ...; the generic mark is drawn`. Skipped parts are listed (the first few) in the same log.
+
 ### The two marks
 
 | File | Purpose | Fallback when missing or invalid |
 | --- | --- | --- |
-| `symbols/omsi2-logo.png` | The OMSI 2 logo. openHUD ships no copy of the trademark logo. | the package's `symbol`, then the generic `@omsi2` mark, then the text "OMSI 2" |
-| `symbols/openomsi.png` | The openOMSI mark. | none |
+| `symbols/omsi2-logo.png` or `.svg` | The OMSI 2 logo, at the right of the menu header. openHUD ships no copy of the trademark logo. | the package's `symbol`, then a neutral outlined tag with a steering wheel (openHUD writes no brand text) |
+| `symbols/openomsi.png` or `.svg` | The openOMSI mark, next to it. | none |
 
-Both follow the picture rules (PNG only for these names). The package author is responsible for the right to use the logo in the package ([fonts, symbols and licensing](../concepts/fonts-symbols-and-licensing.md)).
+Both follow the picture rules; when both a `.png` and a `.svg` exist, the PNG is used. The package author is responsible for the right to use the logo in the package ([fonts, symbols and licensing](../concepts/fonts-symbols-and-licensing.md)).
 
 ## `fonts/`
 

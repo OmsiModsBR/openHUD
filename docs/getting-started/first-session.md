@@ -38,7 +38,7 @@ Once you are in the driver's seat the radar appears in its corner (bottom-left b
 - the map turns as you turn: your heading is up. A small red mark and the letter on the ring show where north is;
 - the other vehicles around you as small colored shapes (up to 48);
 - the scale of the circle at its bottom edge (for the default zoom, `400 m`: the radius of the circle);
-- the game clock in a strip under the radar;
+- your speed and the game clock in a strip under the radar;
 - with a realmap package: water, parks, built-up areas, rail, relief, streets and municipality names, and the package's icons ([the radar](../concepts/the-radar.md)). Without one, the circle is empty apart from your vehicle and the vehicles around you.
 
 The radar draws only when the game knows where you are: you need a player vehicle, and the tile you are on must be in the map's tile table. If you are in a free camera away from any vehicle, or the map has just changed, the radar waits and draws nothing. That is normal; the reason is in `status` (step 6).

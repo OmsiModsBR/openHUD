@@ -1,6 +1,6 @@
 # O menu de pausa
 
-<!-- l10n: source=concepts/the-pause-menu.md source-sha256=a5df1dfdf707663dfa1335660bbb107ec3e9af732b7939c2c70dc2eb70904731 -->
+<!-- l10n: source=concepts/the-pause-menu.md source-sha256=22db578eb306a7373339c11b066dbd644461667ef2ebee51391fb623170dd440 -->
 > Tradução da [página original em inglês](../../concepts/the-pause-menu.md) do openHUD 0.1.0. A página em inglês é a referência normativa: se as duas divergirem, valem a página em inglês e o código.
 
 Quando o OMSI pausa, ele mostra seu menu de pausa nativo. O openHUD pode assumir esse menu: ele pede ao OMSI, por meio do OmsiLaunch, que oculte o menu nativo, mostra o seu e, quando você escolhe algo, pede ao OMSI que execute a ação nativa. Esta página explica como isso funciona, os estados por que o módulo passa, o que acontece quando algo falha (e por que o menu nativo é então deixado em paz), as páginas do menu e como ele é dimensionado e lido com o mouse. As teclas estão em [controles](../reference/controls.md); a identidade que um mapa pode dar ao menu está em [pacotes por mapa](per-map-packages.md).
@@ -103,7 +103,7 @@ Se o menu de pausa continua falhando (cinco falhas seguidas, cinco cenas que nã
 | Mapa | O mapa inteiro, norte para cima, centralizado em você; você o move e dá zoom. Usa o pacote realmap quando há um. |
 | Linhas | As linhas do mapa que circulam na data da sessão, uma por linha da tabela (número, nome, cor). Selecionar uma linha não tem outro efeito na 0.1.0. |
 
-O cabeçalho mostra o título e o símbolo do mapa; o rodapé mostra uma dica com as teclas. O texto do menu vem do idioma da interface ([internacionalização](internationalization.md)); o título, o símbolo, a cor de destaque, a cor das linhas e a legenda vêm do pacote de menu de pausa do mapa, ou são os genéricos.
+O cabeçalho mostra o título e o símbolo do mapa (uma imagem ou um desenho SVG) e, à direita, a marca do OMSI 2 e a marca do openOMSI quando o pacote as traz (senão, uma etiqueta neutra); a legenda mostra o ícone do pacote de cada tipo de marcador no lugar da amostra; a página Linhas mostra o ícone do pacote do modo da linha; o rodapé mostra uma dica com as teclas à esquerda e, à direita, as versões do openHUD e do OMSI e, quando o pacote tem, o seu crédito. O texto do menu vem do idioma da interface ([internacionalização](internationalization.md)); o título, o símbolo, a cor de destaque, a cor das linhas e a legenda vêm do pacote de menu de pausa do mapa, ou são os genéricos.
 
 <a id="size-and-the-mouse"></a>
 ## Tamanho e o mouse

@@ -1,0 +1,92 @@
+name: CI
+
+# Offline validation of every pull request and of main. It never starts OMSI
+# and never needs an OMSI installation: the build and the tests run against
+# fixtures and fakes. Triggers are pull_request (not pull_request_target) so a
+# pull request from a fork runs without secrets and with a read-only token.
+#
+# The module builds against OmsiLaunch (project references and the native
+# header), so the job checks out OmsiModsBR/OmsiLaunch at main next to it. It
+# needs an OmsiLaunch main that serves the bridge protocol this module declares
+# (bridge protocol 3); until that is merged the build step fails on the missing contracts.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Required status check "validate": native x86 build and tests, managed
+  # build and tests, the module folder assembled and pinned, and the
+  # documentation gate (links, settings tables, pt-BR parity).
+  validate:
+    name: validate
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # The OmsiLaunch sources the module builds against, inside the workspace
+      # (actions/checkout cannot write outside it). The build script takes the
+      # path through -OmsiLaunchRoot.
+      - uses: actions/checkout@v4
+        with:
+          repository: OmsiModsBR/OmsiLaunch
+          ref: main
+          path: OmsiLaunch-checkout
+          persist-credentials: false
+
+      # The modules target .NET 6 (the runtime OMSI hosts through OmsiLaunch);
+      # the .NET 8 SDK builds them, as it builds OmsiLaunch. OmsiLaunch has no
+      # global.json, so no SDK version is pinned.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            6.0.x
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      # Puts MSBuild on PATH. The native projects name platform toolset v145,
+      # which the Visual Studio of the hosted image must provide. If windows-latest
+      # still ships an older Visual Studio, set the repository variable
+      # PLATFORM_TOOLSET (for example v143): it is passed to the build script as
+      # -PlatformToolset and overrides the projects' toolset for this job only.
+      # Whether the image provides v145 cannot be checked without a run on GitHub.
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build, test and assemble the module
+        shell: powershell
+        env:
+          PLATFORM_TOOLSET: ${{ vars.PLATFORM_TOOLSET }}
+        run: |
+          $arguments = @{ OmsiLaunchRoot = "$env:GITHUB_WORKSPACE\OmsiLaunch-checkout" }
+          if ($env:PLATFORM_TOOLSET) { $arguments.PlatformToolset = $env:PLATFORM_TOOLSET }
+          & ./tools/Build-Module.ps1 @arguments
+          if (-not $?) { exit 1 }
+
+      - name: Check the documentation
+        shell: powershell
+        run: |
+          & ./tools/Check-Docs.ps1
+          if (-not $?) { exit 1 }
+
+      - name: Upload the assembled module
+        uses: actions/upload-artifact@v4
+        with:
+          name: openhud-module
+          path: artifacts/modules/openhud
+          if-no-files-found: error

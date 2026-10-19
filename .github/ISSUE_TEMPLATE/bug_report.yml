@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in openHUD does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. Check the documentation's troubleshooting page and the known limitations first. Do not use this form for a security vulnerability; see SECURITY.md.
+  - type: input
+    id: module-version
+    attributes:
+      label: openHUD version
+      description: The version in the module's module.json, or the release you installed.
+    validations:
+      required: true
+  - type: input
+    id: omsilaunch-version
+    attributes:
+      label: OmsiLaunch version
+    validations:
+      required: true
+  - type: input
+    id: omsi-version
+    attributes:
+      label: OMSI 2 version and edition
+      description: For example Steam or retail, and the build number if you know it.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The map, the vehicle and the settings of the module that matter.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and notices
+      description: Relevant lines from the module's or OmsiLaunch's log, and any notice shown. Remove personal paths if you wish.
+      render: text

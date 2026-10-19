@@ -26,12 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-        with:
-          repository: OmsiModsBR/OmsiLaunch
-          ref: main
-          path: OmsiLaunch-checkout
-          persist-credentials: false
+      # A shallow clone, not actions/checkout: the OmsiLaunch tree has a gitlink without a
+      # .gitmodules entry, which makes actions/checkout's submodule cleanup fail.
+      - name: Fetch OmsiLaunch
+        shell: bash
+        run: git clone --depth 1 --branch main https://github.com/OmsiModsBR/OmsiLaunch.git OmsiLaunch-checkout
 
       - uses: actions/setup-dotnet@v4
         with:

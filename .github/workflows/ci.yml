@@ -37,12 +37,11 @@ jobs:
       # The OmsiLaunch sources the module builds against, inside the workspace
       # (actions/checkout cannot write outside it). The build script takes the
       # path through -OmsiLaunchRoot.
-      - uses: actions/checkout@v4
-        with:
-          repository: OmsiModsBR/OmsiLaunch
-          ref: main
-          path: OmsiLaunch-checkout
-          persist-credentials: false
+      # A shallow clone, not actions/checkout: the OmsiLaunch tree has a gitlink without a
+      # .gitmodules entry, which makes actions/checkout's submodule cleanup fail.
+      - name: Fetch OmsiLaunch
+        shell: bash
+        run: git clone --depth 1 --branch main https://github.com/OmsiModsBR/OmsiLaunch.git OmsiLaunch-checkout
 
       # The modules target .NET 6 (the runtime OMSI hosts through OmsiLaunch);
       # the .NET 8 SDK builds them, as it builds OmsiLaunch. OmsiLaunch has no

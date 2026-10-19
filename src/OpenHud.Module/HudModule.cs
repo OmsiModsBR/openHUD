@@ -33,6 +33,8 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
 
     private static readonly MapFrame IdentityFrame = new(0);
 
+    private sealed record CachedMap(long Key, SceneDocument Document, string Fragment);
+
     private readonly IPauseClock clock;
     private readonly Counters counters = new();
     private readonly HashSet<string> noticed = new(StringComparer.Ordinal);
@@ -89,7 +91,11 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
     private string lastJson = "";
     private string lastKind = "";
     private long lastRadarSignature;
+    private ulong lastRadarHash;
     private long lastRadarSentAt = long.MinValue;
+    // The pause map as last built: its inputs' key, the commands (for the frame check) and their encoded JSON fragment.
+    private CachedMap? mapCache;
+    private int linesVersion;
     private long lastPauseStamp = long.MinValue;
     private int sceneFailureRun;
     private int drawRetries;
@@ -282,6 +288,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         if (next is null) return;
         map = next;
         mapSerial++;
+        mapCache = null;
         Array.Clear(askedMap);
         if (reader is not null) frames = new FrameSource(reader, new FrameSourceOptions { TileMetres = next.TileMetres });
         uploads.Replace(next.Uploads);
@@ -324,6 +331,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         var accent = map?.PauseMenu.Identity.AccentColor is { } a ? new HudColor(a.R, a.G, a.B).ToHex() : PauseIdentity.DefaultAccent;
         var (radar, entries) = RadarModels.Lines(map, date == 0 ? null : date, accent);
         radarLines = radar;
+        linesVersion++;
         menu?.SetLines(entries);
     }
 
@@ -342,6 +350,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         {
             var window = MapRect.Around(packageX, packageY, Math.Max(half * 1.8, 600));
             current.Data.Ask(kind, window, detail, minorContours, minExtent);
+            counters.MapQueries++;
             askedExtent[k] = minExtent; asked[k] = window; askedDetail[k] = detail; askedAt[k] = now; askedMap[k] = current;
         }
         return set;
@@ -373,9 +382,12 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
 
         var model = RadarModels.Build(frame, player, map?.Frame ?? IdentityFrame, set, null, map?.Realmap.Manifest?.Player, UnitFormat.Speed(player.SpeedMetresPerSecond, settings.Units, texts));
         var scene = SceneOpacity.Apply(radarBuilder.Build(model, radarOptions), settings.RadarOpacityPercent);
-        var json = SceneJson.Encode(scene);
-        if (sameKind && json == lastJson) { counters.ScenesSkipped++; lastRadarSignature = signature; lastRadarSentAt = now; return; }
-        if (Send(json, "radar")) { lastRadarSignature = signature; lastRadarSentAt = now; }
+        // A scene the build produced equal to the one on screen is not encoded or sent; the hash says so without encoding it.
+        var hash = SceneHash.Of(scene);
+        if (sameKind && hash == lastRadarHash) { counters.ScenesSkipped++; lastRadarSignature = signature; lastRadarSentAt = now; return; }
+        // SceneBuilder.Build validated the commands; the opacity only scaled colors.
+        var json = SceneJson.Encode(scene, validate: false);
+        if (Send(json, "radar")) { lastRadarSignature = signature; lastRadarSentAt = now; lastRadarHash = hash; }
     }
 
     private static RadarOptions RadarOptionsFor(HudSettings s)
@@ -418,22 +430,24 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         MenuRect? area = null;
         if (scene.Mode == MenuSceneMode.MapBehind || menu!.Page == MenuPage.Map) area = scene.Region("map")?.Rect;
 
-        SceneDocument? sub = null;
+        CachedMap? sub = null;
         if (area is { W: >= 16, H: >= 16 } rect)
         {
-            try { sub = BuildFullMap(frame, rect, scene.Mode == MenuSceneMode.MapBehind, now); }
+            try { sub = FullMapFor(frame, rect, scene.Mode == MenuSceneMode.MapBehind, now); }
             catch (Exception exception) { Fault("map", exception); }
         }
-        SceneDocument document;
-        try { document = SceneComposer.Compose(scene, sub, area ?? default); }
-        catch (SceneException) when (sub is not null) { document = SceneComposer.Compose(scene, null, default); }
-        var json = SceneJson.Encode(document);
+        string json;
+        try { json = SceneComposer.ComposeJson(scene, sub?.Document, sub?.Fragment, area ?? default); }
+        catch (SceneException) when (sub is not null) { json = SceneComposer.ComposeJson(scene, null, null, default); }
         if (json == lastJson && lastKind == "pause") { lastPauseStamp = stamp; return; }
         if (Send(json, "pause")) { lastPauseStamp = stamp; counters.PauseFailureRun = 0; }
         else if (++counters.PauseFailureRun >= FailureLimit) DegradePause("the scene could not be published");
     }
 
-    private SceneDocument BuildFullMap(FrameSnapshot? frame, MenuRect area, bool provisional, long now)
+    // The map for the pause menu: rebuilt only when something it shows changed (the view, the data window, the player or the
+    // vehicles around, the lines). A menu that is only hovered or focused leaves all of that alone, so the map, and the
+    // encoding of its thousands of commands, is reused.
+    private CachedMap FullMapFor(FrameSnapshot? frame, MenuRect area, bool provisional, long now)
     {
         var mapFrame = map?.Frame ?? IdentityFrame;
         var (displayX, displayY) = mapFrame.ToDisplay(lastPlayer.X, lastPlayer.Y);
@@ -448,11 +462,22 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         var set = Features(MapQuery.FullMap, cx, cy, half, DetailForScale(view.MetersPerPixel), view.MetersPerPixel <= 1, MinVisible(view.MetersPerPixel), now);
 
         var pose = frame is null ? null : RadarModels.PlayerFor(frame, out _);
+        var key = new HashCode();
+        key.Add(provisional); key.Add(width); key.Add(height); key.Add(view.CenterX); key.Add(view.CenterY); key.Add(view.MetersPerPixel);
+        key.Add(set?.Id ?? 0); key.Add(mapSerial); key.Add(linesVersion); key.Add(displayX); key.Add(displayY);
+        key.Add(frame is not null && pose is not null ? RadarModels.Signature(frame, pose, 0, 0, 0, view.MetersPerPixel) : 0L);
+        var hash = key.ToHashCode();
+        if (mapCache is { } cached && cached.Key == hash) return cached;
+
         var model = frame is not null && pose is not null
             ? RadarModels.Build(frame, pose, mapFrame, set, radarLines, map?.Realmap.Manifest?.Player)
             : new RadarModel(new RadarPlayer(displayX, displayY, 0), set?.Features, set?.Regions, set?.Markers, Array.Empty<RadarVehicle>(), null, null, radarLines);
         var options = new FullMapOptions { CanvasWidth = width, CanvasHeight = height, Margin = 0, SidePanelWidth = 0, OverBackground = false, MaxCommands = 6900, MaxVehicles = 120, MaxMarkers = 120, Units = settings.Units };
-        return fullBuilder.Build(model, view, options);
+        var document = fullBuilder.Build(model, view, options);
+        var built = new CachedMap(hash, document, SceneJson.EncodeFragment(document.Commands));
+        counters.MapBuilds++;
+        mapCache = built;
+        return built;
     }
 
     private void DegradePause(string why)
@@ -658,6 +683,8 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
             ["uploads_failed"] = uploads.Failed.ToString(inv),
             ["pause_menu"] = machine is null ? "off" : pauseDegraded ? "degraded" : "on",
             ["pause_state"] = machine?.State.ToString() ?? "",
+            ["map_queries"] = counters.MapQueries.ToString(inv),
+            ["map_builds"] = counters.MapBuilds.ToString(inv),
             ["scenes_published"] = counters.ScenesPublished.ToString(inv),
             ["scenes_skipped"] = counters.ScenesSkipped.ToString(inv),
             ["scene_failures"] = counters.SceneFailures.ToString(inv),
@@ -731,7 +758,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
 
     private sealed class Counters
     {
-        public long Ticks, ScenesPublished, ScenesSkipped, SceneFailures, SlowTicks, ProblemFrames, Faults, StatsFailures, DrawFailures;
+        public long Ticks, MapQueries, MapBuilds, ScenesPublished, ScenesSkipped, SceneFailures, SlowTicks, ProblemFrames, Faults, StatsFailures, DrawFailures;
         public int RadarFaultRun, PauseFaultRun, PauseFailureRun;
         public double TickLastMs, TickMaxMs;
         public string LastFault = "", NativeProblem = "";

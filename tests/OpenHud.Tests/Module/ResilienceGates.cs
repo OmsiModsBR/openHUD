@@ -334,6 +334,7 @@ internal static class ResilienceGates
         Gates.Check(s.WaitFor(() => { s.Tick(1); return int.Parse(s.Status()["radar_features"]) >= 2000; }, 20000), "the 20000-feature window arrives: " + s.Status()["radar_features"]);
         s.Tick(40);
         var times = new List<double>();
+        s.Native.CheckScenes = false; s.Native.Recording = false; // the fake's own decoding of a big scene is not the module's cost
         for (var i = 0; i < 300; i++)
         {
             var started = Stopwatch.GetTimestamp();
@@ -344,11 +345,14 @@ internal static class ResilienceGates
         var p50 = times[times.Count / 2];
         var p90 = times[(int)(times.Count * 0.90)];
         var p95 = times[(int)(times.Count * 0.95)];
+        var p99 = times[(int)(times.Count * 0.99)];
         var max = times[^1];
-        Console.WriteLine($"  tick with 20000 features: p50 {p50:0.00} ms, p95 {p95:0.00} ms, max {max:0.00} ms");
-        Gates.Check(p50 < 20, "the median tick is far under the 50 ms period: " + p50.ToString("0.00") + " ms");
-        Gates.Check(p90 < 50, "nine ticks in ten stay under the period: " + p90.ToString("0.00") + " ms");
-        Gates.Check(max < 250, "no tick stalls (a garbage collection is the worst case): " + max.ToString("0.00") + " ms");
+        Console.WriteLine($"  tick with 20000 features: p50 {p50:0.00} ms, p90 {p90:0.00} ms, p95 {p95:0.00} ms, p99 {p99:0.00} ms, max {max:0.00} ms");
+        Gates.Check(p50 < 3, "the median tick is a small part of the 50 ms period: " + p50.ToString("0.00") + " ms");
+        Gates.Check(p90 < 8, "nine ticks in ten stay far under the period: " + p90.ToString("0.00") + " ms");
+        Gates.Check(max < 40, "no tick comes near the period (a garbage collection is the worst case): " + max.ToString("0.00") + " ms");
+        s.Native.CheckScenes = true; s.Native.Recording = true;
+        s.Tick(12);
         s.CheckAllScenesValid("budget");
         Gates.Check(Doc.Decode(s.Native.LastScene!).Commands.Count <= 6000, "the scene stays inside its command budget");
         // The pause menu on the full map costs the same order.
@@ -358,6 +362,7 @@ internal static class ResilienceGates
         s.Tick(3);
         s.WaitFor(() => { s.Tick(1, advanceDrive: false); return int.Parse(s.Status()["fullmap_features"]) > 5000; }, 20000);
         var worst = 0.0;
+        s.Native.CheckScenes = false; s.Native.Recording = false;
         for (var i = 0; i < 20; i++)
         {
             s.Input.Queue(Keys.Down(Keys.Left_), Keys.Up(Keys.Left_));
@@ -366,7 +371,10 @@ internal static class ResilienceGates
             worst = Math.Max(worst, (Stopwatch.GetTimestamp() - started) * 1000.0 / Stopwatch.Frequency);
         }
         Console.WriteLine($"  tick panning the full map: max {worst:0.00} ms");
-        Gates.Check(worst < 120, "panning the full map stays inside the period: " + worst.ToString("0.00"));
+        Gates.Check(worst < 40, "panning the full map stays inside the period: " + worst.ToString("0.00"));
+        s.Native.CheckScenes = true; s.Native.Recording = true;
+        s.Input.Queue(Keys.Down(Keys.Left_), Keys.Up(Keys.Left_));
+        s.Tick(3, advanceDrive: false);
         s.CheckAllScenesValid("budget map");
     }
 
@@ -390,7 +398,7 @@ internal static class ResilienceGates
         Console.WriteLine($"  10000 ticks: retained growth {(after - before) / 1024} KiB, allocated {allocated / 10000 / 1024} KiB per tick");
         Gates.Check(after - before < 2 * 1024 * 1024, "memory does not grow with the ticks: " + (after - before) / 1024 + " KiB");
         Gates.Check(s.Context.Events.Count - events <= 3, "no event per tick: " + (s.Context.Events.Count - events));
-        Gates.Check(allocated / 10000 < 1024 * 1024, "allocation per tick stays modest: " + allocated / 10000 / 1024 + " KiB");
+        Gates.Check(allocated / 10000 < 256 * 1024, "allocation per tick stays modest: " + allocated / 10000 / 1024 + " KiB");
         Gates.Check(s.Status()["faults"] == "0", "no fault");
         // The same through a pause that opens and closes many times.
         for (var i = 0; i < 200; i++)

@@ -10,13 +10,23 @@ namespace OpenHud.Scene;
 /// </summary>
 public static class SceneJson
 {
-    public static string Encode(SceneDocument scene)
+    [ThreadStatic] private static StringBuilder? reusable;
+
+    // `validate: false` is for a document whose commands were validated when it was built (SceneBuilder.Build) and only
+    // had colors or opacities scaled since: checking it again on every tick is cost without a possible finding.
+    public static string Encode(SceneDocument scene, bool validate = true)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        var issues = SceneValidator.Validate(scene);
-        if (issues.Count > 0) throw new SceneException(issues);
+        if (validate)
+        {
+            var issues = SceneValidator.Validate(scene);
+            if (issues.Count > 0) throw new SceneException(issues);
+        }
+        else if (scene.Commands.Count > SceneLimits.MaxCommands) throw new SceneException("too many commands: " + scene.Commands.Count.ToString(CultureInfo.InvariantCulture));
 
-        var sb = new StringBuilder(256 + scene.Commands.Count * 64);
+        // The builder is kept per thread: a scene is encoded on every tick it changes, and its chunks would be garbage each time.
+        var sb = reusable ??= new StringBuilder(256 + scene.Commands.Count * 64);
+        sb.Clear();
         sb.Append("{\"v\":").Append(SceneLimits.Version.ToString(CultureInfo.InvariantCulture));
         sb.Append(",\"w\":").Append(scene.Width.ToString(CultureInfo.InvariantCulture));
         sb.Append(",\"h\":").Append(scene.Height.ToString(CultureInfo.InvariantCulture));
@@ -30,9 +40,23 @@ public static class SceneJson
         sb.Append("]}");
 
         var text = sb.ToString();
+        if (sb.Capacity > 4 * SceneLimits.MaxJsonBytes) reusable = null; // a runaway scene does not keep its buffer
         if (Encoding.UTF8.GetByteCount(text) > SceneLimits.MaxJsonBytes)
             throw new SceneException("scene JSON exceeds " + SceneLimits.MaxJsonBytes.ToString(CultureInfo.InvariantCulture) + " bytes");
         return text;
+    }
+
+    /// <summary>The commands as the comma-separated JSON objects of a "cmds" array (no brackets), for callers that assemble a scene from parts they cache.</summary>
+    public static string EncodeFragment(IReadOnlyList<SceneCommand> commands)
+    {
+        ArgumentNullException.ThrowIfNull(commands);
+        var sb = new StringBuilder(commands.Count * 64);
+        for (int i = 0; i < commands.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            Write(sb, commands[i]);
+        }
+        return sb.ToString();
     }
 
     public static byte[] EncodeUtf8(SceneDocument scene) => Encoding.UTF8.GetBytes(Encode(scene));
@@ -114,6 +138,19 @@ public static class SceneJson
     private static void Num(StringBuilder sb, double value)
     {
         if (value == 0) { sb.Append('0'); return; } // also folds -0
+        // The scene builders round to a tenth of a pixel, and a number that is the nearest double to k/10 prints as exactly
+        // that decimal in the round-trip format, so those (nearly all of them) are written from integers, without formatting.
+        var scaled = value * 10;
+        var tenths = Math.Round(scaled);
+        if (Math.Abs(tenths) < 1e13 && tenths / 10 == value)
+        {
+            var k = (long)tenths;
+            if (k < 0) { sb.Append('-'); k = -k; }
+            sb.Append(k / 10);
+            var fraction = (int)(k % 10);
+            if (fraction != 0) sb.Append('.').Append((char)('0' + fraction));
+            return;
+        }
         Span<char> buffer = stackalloc char[40];
         value.TryFormat(buffer, out int written, "R", CultureInfo.InvariantCulture);
         sb.Append(buffer.Slice(0, written));

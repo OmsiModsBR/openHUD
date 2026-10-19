@@ -268,14 +268,19 @@ internal static class GapSessionGates
         s.Tick(3);
         ToTab(s, 1);
         s.Tick(6);
-        var queries = long.Parse(s.Status()["scenes_published"]);
+        var scenes = long.Parse(s.Status()["scenes_published"]);
+        var builds = long.Parse(s.Status()["map_builds"]);
+        var view = s.Status()["view"].Split('x');
+        var geometry = new MenuGeometry(new MenuViewport(int.Parse(view[0]), int.Parse(view[1]), 1, 1));
+        var tabs = new[] { OpenHud.Tests.PauseTests.Ev.Center(geometry, MenuGeometry.TabRect(0)), OpenHud.Tests.PauseTests.Ev.Center(geometry, MenuGeometry.TabRect(2)) };
         for (var i = 0; i < 12; i++)
         {
-            s.Input.Queue(Keys.Move(400 + i * 7, 300));
+            s.Input.Queue(Keys.Move(tabs[i % 2].X, tabs[i % 2].Y));
             s.Tick(1, advanceDrive: false);
         }
         Gates.Check(s.Native.LastSceneDrawsMenu, "the menu is still up");
         s.CheckAllScenesValid("hover");
-        Gates.Check(long.Parse(s.Status()["scenes_published"]) >= queries, "scenes go on");
+        Gates.Check(long.Parse(s.Status()["scenes_published"]) - scenes >= 10, "the menu is redrawn as the pointer moves");
+        Gates.Check(long.Parse(s.Status()["map_builds"]) - builds <= 1, "...but the map under it is not rebuilt: " + (long.Parse(s.Status()["map_builds"]) - builds));
     }
 }

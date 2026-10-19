@@ -244,6 +244,7 @@ internal sealed class FakeNative : IModuleNativeComponent
     public readonly List<(string Op, string Args)> Calls = new();
     public readonly List<string> Scenes = new();
     public bool Recording = true;
+    public bool CheckScenes = true;
     public bool FailScenes;
     public long CallCount, SceneCount;
     private string? lastScene;
@@ -295,6 +296,8 @@ internal sealed class FakeNative : IModuleNativeComponent
             case "scene":
             {
                 if (FailScenes) return Failure("injected", "scenes are refused");
+                // Timing runs switch the check off: the fake's decoding and validating of a big scene would be counted as the module's.
+                if (!CheckScenes) { lastScene = argumentsJson; SceneCount++; return "{\"ok\":true}"; }
                 try
                 {
                     var scene = Doc.Decode(argumentsJson);

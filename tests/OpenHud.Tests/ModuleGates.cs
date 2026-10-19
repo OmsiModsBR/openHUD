@@ -13,5 +13,6 @@ internal static class ModuleGates
         ResilienceGates.Register();
         UnitGates.Register();
         GapSessionGates.Register();
+        TickCostGates.Register();
     }
 }

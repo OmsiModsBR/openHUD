@@ -66,9 +66,24 @@ internal sealed class MapRenderer
         public bool Selected;
     }
 
+    // A radar build handles thousands of candidates; their objects and the scratch list are kept per thread and reused, so a
+    // build allocates little beyond the geometry it hands to the scene (the garbage collector runs less often on the tick).
+    [ThreadStatic] private static List<Candidate>? spare;
+    [ThreadStatic] private static List<double>? scratch;
+
     private readonly RadarTheme theme;
     private readonly List<Candidate> candidates = new();
     private readonly List<double> run = new();
+    private int rented;
+
+    private Candidate Rent()
+    {
+        var list = spare ??= new List<Candidate>();
+        if (rented == list.Count) list.Add(new Candidate());
+        var c = list[rented++];
+        c.Selected = false; c.Width = 0;
+        return c;
+    }
 
     public MapRenderer(RadarTheme theme) => this.theme = theme;
 
@@ -100,11 +115,20 @@ internal sealed class MapRenderer
     public int DrawFeatures(SceneBuilder b, IReadOnlyList<RadarFeature>? features, MapView view, MapBudget budget)
     {
         candidates.Clear();
+        rented = 0;
         if (features is null || budget.Commands <= 0) return 0;
+        // The window as a box in world metres around the focus (any heading fits inside the circle through its corners):
+        // a feature whose own box misses it cannot show, and is not projected.
+        double wx = Math.Max(Math.Abs(view.Left - view.ScreenX), Math.Abs(view.Right - view.ScreenX));
+        double wy = Math.Max(Math.Abs(view.Top - view.ScreenY), Math.Abs(view.Bottom - view.ScreenY));
+        double reach = (Math.Sqrt(wx * wx + wy * wy) + 2) / view.Scale;
+        bool cull = view.Scale > 0 && double.IsFinite(reach);
+        double boxL = view.FocusX - reach, boxR = view.FocusX + reach, boxB = view.FocusY - reach, boxT = view.FocusY + reach;
         for (int i = 0; i < features.Count; i++)
         {
             var f = features[i];
             if (f?.Points is null || f.Points.Length < 4) continue;
+            if (cull && !FeatureBounds.Of(f.Points).Intersects(boxL, boxB, boxR, boxT)) continue;
             bool area = f.Closed && f.Layer is RadarLayer.Water or RadarLayer.Green or RadarLayer.Built;
             string color = SceneColor.Or(f.Color, LayerColor(f.Layer));
             double widthMeters = double.IsFinite(f.WidthMeters) && f.WidthMeters > 0 ? Math.Min(f.WidthMeters, 60) : 6;
@@ -164,13 +188,17 @@ internal sealed class MapRenderer
         }
         if (run.Count < 6) return;
         if (maxX < view.Left || minX > view.Right || maxY < view.Top || minY > view.Bottom) return;
-        var clipped = ClipPolygon(run, view);
+        // Most areas lie wholly inside the window: they need no clipping, which allocates a list per window edge.
+        var inside = minX >= view.Left && maxX <= view.Right && minY >= view.Top && maxY <= view.Bottom;
+        var clipped = inside ? run : ClipPolygon(run, view);
         if (clipped.Count < 6) return;
         var pts = Simplify(clipped, closed: true);
         if (pts.Length < 6) return;
         double diag = Diagonal(pts);
         if (diag < 2) return;
-        candidates.Add(new Candidate { Layer = f.Layer, Pts = pts, Area = true, Color = color, Score = diag * LayerWeight(f.Layer), Order = candidates.Count });
+        var area = Rent();
+        area.Layer = f.Layer; area.Pts = pts; area.Area = true; area.Color = color; area.Score = diag * LayerWeight(f.Layer); area.Order = candidates.Count;
+        candidates.Add(area);
     }
 
     private void AddLines(RadarFeature f, MapView view, string color, double widthMeters)
@@ -225,7 +253,11 @@ internal sealed class MapRenderer
             for (int i = 0; i < pts.Length; i++) pts[i] = Round(run[i]);
             double diag = Diagonal(pts);
             if (diag >= 2)
-                candidates.Add(new Candidate { Layer = f.Layer, Pts = pts, Area = false, Color = color, Width = widthPx, Score = diag * LayerWeight(f.Layer), Order = candidates.Count });
+            {
+                var line = Rent();
+                line.Layer = f.Layer; line.Pts = pts; line.Area = false; line.Color = color; line.Width = widthPx; line.Score = diag * LayerWeight(f.Layer); line.Order = candidates.Count;
+                candidates.Add(line);
+            }
         }
         run.Clear();
     }
@@ -244,7 +276,8 @@ internal sealed class MapRenderer
     // Drops points closer than one pixel to the previous kept one and rounds to 0.1 px.
     private static double[] Simplify(List<double> src, bool closed)
     {
-        var dst = new List<double>(src.Count);
+        var dst = scratch ??= new List<double>(256);
+        dst.Clear();
         for (int i = 0; i + 1 < src.Count; i += 2)
         {
             double x = Round(src[i]), y = Round(src[i + 1]);
@@ -287,13 +320,20 @@ internal sealed class MapRenderer
         return double.IsFinite(ax) && double.IsFinite(ay) && double.IsFinite(bx) && double.IsFinite(by);
     }
 
-    // Sutherland-Hodgman against the four window edges.
+    // Sutherland-Hodgman against the four window edges. The result lives in a per-thread scratch list that the next call
+    // overwrites: the caller copies what it keeps (Simplify does).
+    [ThreadStatic] private static List<double>? clipFrom;
+    [ThreadStatic] private static List<double>? clipTo;
+
     private static List<double> ClipPolygon(List<double> input, MapView v)
     {
-        var current = new List<double>(input);
+        var current = clipFrom ??= new List<double>(64);
+        var next = clipTo ??= new List<double>(64);
+        current.Clear();
+        current.AddRange(input);
         for (int edge = 0; edge < 4 && current.Count >= 6; edge++)
         {
-            var next = new List<double>(current.Count + 8);
+            next.Clear();
             int n = current.Count / 2;
             for (int i = 0; i < n; i++)
             {
@@ -304,8 +344,11 @@ internal sealed class MapRenderer
                 if (cin != pin) { Intersect(edge, px, py, cx, cy, v, out double ix, out double iy); next.Add(ix); next.Add(iy); }
                 if (cin) { next.Add(cx); next.Add(cy); }
             }
-            current = next;
+            (current, next) = (next, current);
         }
+        // Keep the two scratch lists straight whichever one ended up holding the result.
+        clipFrom = current;
+        clipTo = next;
         return current;
     }
 

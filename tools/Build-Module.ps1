@@ -10,17 +10,23 @@ OmsiLaunch-spec-pack\OmsiLaunch).
 
 .PARAMETER SkipTests
 Builds and assembles without running the tests.
+
+.PARAMETER PlatformToolset
+Overrides the C++ platform toolset the projects name (v145), for a Visual Studio
+that does not provide it (for example v143). Empty keeps the projects' own.
 #>
 [CmdletBinding()]
 param(
     [string]$OmsiLaunchRoot = '',
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [string]$PlatformToolset = ''
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $artifacts = Join-Path $root 'artifacts'
 $extra = @()
 if ($OmsiLaunchRoot) { $extra += "-p:OmsiLaunchRoot=$((Resolve-Path $OmsiLaunchRoot).Path.TrimEnd('\'))\" }
+if ($PlatformToolset) { $extra += "-p:PlatformToolset=$PlatformToolset" }
 $omsiLaunch = if ($OmsiLaunchRoot) { (Resolve-Path $OmsiLaunchRoot).Path } else { Join-Path $root '..\OmsiLaunch-spec-pack\OmsiLaunch' }
 
 function Find-MSBuild {

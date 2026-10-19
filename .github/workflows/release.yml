@@ -1,0 +1,128 @@
+name: Release
+
+# Runs when a version tag is pushed (v<version>, equal to the "version" of the
+# module manifest). It builds the module the way CI does, packs
+# openhud-<version>.zip with its .sha256 (tools/New-ReleasePackage.ps1, which also
+# verifies the archive against the manifest pins) and creates the GitHub
+# release with the notes of the matching CHANGELOG.md section. Nothing here
+# touches an OMSI installation. The build needs an OmsiLaunch main that serves
+# the bridge protocol this module declares (bridge protocol 3).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: package
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OmsiModsBR/OmsiLaunch
+          ref: main
+          path: OmsiLaunch-checkout
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            6.0.x
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      # See ci.yml: v145 must be provided by the image, or PLATFORM_TOOLSET set.
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build, verify the tag and pack
+        shell: powershell
+        env:
+          TAG: ${{ github.ref_name }}
+          PLATFORM_TOOLSET: ${{ vars.PLATFORM_TOOLSET }}
+        run: |
+          $arguments = @{
+            OmsiLaunchRoot  = "$env:GITHUB_WORKSPACE\OmsiLaunch-checkout"
+            OutputDirectory = "$env:GITHUB_WORKSPACE\artifacts\release"
+            Tag             = $env:TAG
+          }
+          if ($env:PLATFORM_TOOLSET) { $arguments.PlatformToolset = $env:PLATFORM_TOOLSET }
+          & ./tools/New-ReleasePackage.ps1 @arguments
+          if (-not $?) { exit 1 }
+
+      - name: Check the documentation
+        shell: powershell
+        run: |
+          & ./tools/Check-Docs.ps1
+          if (-not $?) { exit 1 }
+
+      - name: Upload the release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: openhud-release
+          path: |
+            artifacts/release/openhud-*.zip
+            artifacts/release/openhud-*.zip.sha256
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: openhud-release
+          path: release
+
+      - name: Create the GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:TAG -notmatch '^v(\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?)$') { throw "The tag '$env:TAG' is not v<semantic version>." }
+          $version = $Matches[1]
+          $zip = "release/openhud-$version.zip"
+          if (-not (Test-Path -LiteralPath $zip) -or -not (Test-Path -LiteralPath "$zip.sha256")) { throw "The packed files for $version are missing." }
+
+          # Notes: the CHANGELOG.md section whose heading starts with "## <version>".
+          $lines = Get-Content -LiteralPath 'CHANGELOG.md' -Encoding UTF8
+          $start = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match ('^##\s+' + [regex]::Escape($version) + '(\s|$)')) { $start = $i + 1; break }
+          }
+          if ($start -lt 0) { throw "CHANGELOG.md has no section for $version." }
+          $end = $lines.Count
+          for ($i = $start; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '^##\s') { $end = $i; break } }
+          $notes = ($lines[$start..($end - 1)] -join "`n").Trim()
+          if (-not $notes) { throw "The CHANGELOG.md section for $version is empty." }
+          Set-Content -LiteralPath 'release-notes.md' -Value $notes -Encoding UTF8
+
+          $flags = @()
+          if ($version.Contains('-') -or $version.StartsWith('0.')) { $flags += '--prerelease' }
+          gh release create $env:TAG $zip "$zip.sha256" --repo $env:REPOSITORY --verify-tag --title "openHUD $version" --notes-file release-notes.md @flags
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed.' }

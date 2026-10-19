@@ -67,3 +67,6 @@ Complete documentation, with examples, in English and Brazilian Portuguese: [Eng
 - **Referência:** [Configurações](docs/pt-BR/reference/settings.md) · [Operações e eventos](docs/pt-BR/reference/operations-and-events.md) · [Formato do pacote de menu de pausa](docs/pt-BR/reference/pause-menu-package.md) · [Pacote realmap](docs/pt-BR/reference/realmap-package.md) · [Chaves de idioma da interface](docs/pt-BR/reference/ui-language-keys.md) · [Controles](docs/pt-BR/reference/controls.md) · [Compatibilidade e capacidades](docs/pt-BR/reference/compatibility.md) · [Erros e degradação](docs/pt-BR/reference/errors-and-degradation.md) · [Limitações conhecidas](docs/pt-BR/reference/known-limitations.md) · [FAQ](docs/pt-BR/reference/faq.md) · [Protocolo de cena (em inglês)](docs/scene-protocol.md) · [Arquitetura](docs/pt-BR/architecture.md)
 - **Status:** [Cobertura de testes](docs/pt-BR/status/test-coverage.md) · [Status de validação](docs/pt-BR/status/validation.md) · [Changelog](CHANGELOG.md)
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for building, testing, the documentation rules and the commit policy, and [SECURITY.md](SECURITY.md) to report a vulnerability.

@@ -1,0 +1,61 @@
+name: Commit policy
+
+# Required status check "commit-policy": no commit, pull request title or pull
+# request description may name Claude (or an Anthropic address) as author,
+# co-author or generator. Nothing from the pull request is executed: its text is
+# only read, through environment variables.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: commit-policy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commit-policy:
+    name: commit-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject Claude attribution
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          pattern='co-authored-by:.*(claude|anthropic)|noreply@anthropic\.com|generated with .*claude'
+          bad=0
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="$BASE_SHA..$HEAD_SHA"
+            if printf '%s\n%s\n' "$PR_TITLE" "$PR_BODY" | grep -Eiq "$pattern"; then
+              echo "::error::The pull request title or description names Claude/Anthropic as co-author or generator."
+              bad=1
+            fi
+          elif [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            range="$PUSH_AFTER^!"
+          else
+            range="$PUSH_BEFORE..$PUSH_AFTER"
+          fi
+          for commit in $(git rev-list "$range"); do
+            if git show -s --format='%an <%ae>%n%cn <%ce>%n%B' "$commit" | grep -Eiq "$pattern"; then
+              echo "::error::Commit $commit names Claude/Anthropic as author, co-author or generator."
+              bad=1
+            fi
+          done
+          exit $bad

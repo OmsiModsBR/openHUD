@@ -37,6 +37,7 @@
     <ClCompile Include="TestScene.cpp" />
     <ClCompile Include="TestRaster.cpp" />
     <ClCompile Include="TestLayer.cpp" />
+    <ClCompile Include="TestCache.cpp" />
     <ClCompile Include="TestD3D.cpp" />
   </ItemGroup>
   <ItemGroup>

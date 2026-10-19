@@ -276,6 +276,7 @@ bool DrawLayer::OnBeforeReset(IDirect3DDevice9* device) noexcept {
     try {
         if (!IsGameDevice(device)) return false;
         std::lock_guard<std::mutex> guard(deviceLock_);
+        renderer_.InvalidateFrameCache();   // what was tessellated may point at textures the Reset is about to take
         if (backend_.Device() == device) backend_.ReleaseDefaultPool();   // buffers and the background texture
         return true;
     } catch (...) {
@@ -300,6 +301,8 @@ std::string DrawLayer::StatsJson() {
     out += ",\"missing_images\":" + Num(s.missingImages);
     out += ",\"triangles\":" + Num(s.triangles);
     out += ",\"draw_calls\":" + Num(s.drawCalls);
+    out += ",\"tessellations\":" + Num(s.tessellations);
+    out += ",\"replays\":" + Num(s.replays);
     out += ",\"skipped_frames\":" + Num(backend_.SkippedFrames());
     out += ",\"device_resets\":" + Num(deviceResets_.load());
     out += ",\"view_w\":" + Num(static_cast<uint64_t>(backend_.ViewWidth()));

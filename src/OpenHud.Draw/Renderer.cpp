@@ -12,6 +12,7 @@ constexpr size_t kBatchIndices = 180000;
 constexpr int kAtlasTexture = 1024;
 constexpr int kMaxGlyphPixels = 400;
 constexpr size_t kMaxBlankInfos = 8192;
+constexpr size_t kMaxBakedVertices = 600000;   // a frame larger than this is tessellated again each time rather than kept (about 12 MB)
 
 Vtx Lerp(const Vtx& a, const Vtx& b, float t) {
     Vtx r;
@@ -30,6 +31,25 @@ Vtx Lerp(const Vtx& a, const Vtx& b, float t) {
 }
 
 float Cross2(Pt a, Pt b, Pt p) { return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x); }
+
+// Does the convex polygon touch the disc around (cx,cy)? An edge within the radius, or the centre inside.
+bool PolygonTouchesDisc(const std::vector<Vtx>& poly, float cx, float cy, float r2) {
+    const size_t n = poly.size();
+    bool positive = false, negative = false;
+    for (size_t i = 0; i < n; ++i) {
+        const Vtx& p = poly[i];
+        const Vtx& q = poly[(i + 1) % n];
+        const float ex = q.x - p.x, ey = q.y - p.y, len2 = ex * ex + ey * ey;
+        float t = len2 > 0 ? ((cx - p.x) * ex + (cy - p.y) * ey) / len2 : 0.0f;
+        t = std::clamp(t, 0.0f, 1.0f);
+        const float dx = p.x + t * ex - cx, dy = p.y + t * ey - cy;
+        if (dx * dx + dy * dy <= r2) return true;
+        const float side = ex * (cy - p.y) - ey * (cx - p.x);
+        if (side > 0) positive = true;
+        else if (side < 0) negative = true;
+    }
+    return !(positive && negative);
+}
 
 uint64_t GlyphKey(FontRole role, int px, uint32_t cp) {
     return (static_cast<uint64_t>(role) << 56) | (static_cast<uint64_t>(px) << 32) | cp;
@@ -137,7 +157,13 @@ int Renderer::GlyphsResident() const {
     return n;
 }
 
+void Renderer::InvalidateFrameCache() {
+    baked_.reset();
+    building_.reset();
+}
+
 void Renderer::ForgetBackendResources() {
+    InvalidateFrameCache();
     backendImages_.clear();
     for (auto& a : atlases_) a.reset();
     glyphInfo_.clear();
@@ -184,6 +210,15 @@ void Renderer::SyncImages() {
 
 void Renderer::Flush() {
     if (batchI_.empty()) return;
+    if (building_) {
+        BakedBatch batch;
+        batch.v = batchV_;
+        batch.i = batchI_;
+        batch.texture = batchTexture_;
+        building_->vertices += batch.v.size();
+        building_->triangles += batch.i.size() / 3;
+        building_->batches.push_back(std::move(batch));
+    }
     if (!backend_->Draw(batchV_.data(), static_cast<int>(batchV_.size()), batchI_.data(), static_cast<int>(batchI_.size()), batchTexture_))
         failed_ = true;
     frame_.triangles += batchI_.size() / 3;
@@ -229,7 +264,7 @@ void Renderer::Submit(const Mesh& mesh, int texture) {
 }
 
 bool Renderer::ClipPolygon(std::vector<Vtx>& poly) const {
-    std::vector<Vtx> next;
+    std::vector<Vtx>& next = clipNext_;
     for (const ClipPoly& clip : clips_) {
         if (poly.size() < 3 || clip.pts.size() < 3) { poly.clear(); return false; }
         float minx = poly[0].x, maxx = poly[0].x, miny = poly[0].y, maxy = poly[0].y;
@@ -239,17 +274,28 @@ bool Renderer::ClipPolygon(std::vector<Vtx>& poly) const {
         }
         if (maxx < clip.minx || minx > clip.maxx || maxy < clip.miny || miny > clip.maxy) { poly.clear(); return false; }
         if (clip.axisRect && minx >= clip.minx && maxx <= clip.maxx && miny >= clip.miny && maxy <= clip.maxy) continue;
-        const size_t edges = clip.pts.size();
-        bool allInside = true;
-        for (const Vtx& v : poly) {
-            for (size_t e = 0; e < edges && allInside; ++e) {
-                if (Cross2(clip.pts[e], clip.pts[(e + 1) % edges], {v.x, v.y}) < 0) allInside = false;
+        if (clip.circle && circleShortcuts_) {
+            // Inside the inscribed disc: inside the clip, nothing to cut. Missing the circumscribed disc: outside, nothing to keep.
+            bool inside = true, touching = false;
+            for (const Vtx& v : poly) {
+                const float dx = v.x - clip.ccx, dy = v.y - clip.ccy, d2 = dx * dx + dy * dy;
+                if (d2 > clip.rIn2) inside = false;
+                if (d2 <= clip.rOut2) touching = true;
             }
-            if (!allInside) break;
+            if (inside) continue;
+            if (!touching && !PolygonTouchesDisc(poly, clip.ccx, clip.ccy, clip.rOut2)) { poly.clear(); return false; }
         }
-        if (allInside) continue;
+        // Sutherland-Hodgman, an edge at a time; an edge that every vertex is inside of cuts nothing and is skipped.
+        const size_t edges = clip.pts.size();
         for (size_t e = 0; e < edges && poly.size() >= 3; ++e) {
             const Pt a = clip.pts[e], b = clip.pts[(e + 1) % edges];
+            bool anyOut = false, anyIn = false;
+            for (const Vtx& v : poly) {
+                if (Cross2(a, b, {v.x, v.y}) < 0) anyOut = true;
+                else anyIn = true;
+            }
+            if (!anyOut) continue;
+            if (!anyIn) { poly.clear(); return false; }
             next.clear();
             for (size_t i = 0; i < poly.size(); ++i) {
                 const Vtx& s = poly[i];
@@ -301,6 +347,23 @@ void Renderer::PushClip(const Cmd& cmd) {
         for (const Pt& p : clip.pts) {
             clip.minx = std::min(clip.minx, p.x); clip.maxx = std::max(clip.maxx, p.x);
             clip.miny = std::min(clip.miny, p.y); clip.maxy = std::max(clip.maxy, p.y);
+        }
+    }
+    if (cmd.clipCircle && !clip.pts.empty()) {
+        const float columnA = current_.a * current_.a + current_.b * current_.b;
+        const float columnB = current_.c * current_.c + current_.d * current_.d;
+        const float tolerance = 1e-4f * std::max(1.0f, columnA);
+        if (std::fabs(columnA - columnB) <= tolerance && std::fabs(current_.a * current_.c + current_.b * current_.d) <= tolerance) {
+            const Pt centre = current_.Apply({cmd.cx, cmd.cy});
+            const float radius = cmd.r * std::sqrt(columnA);
+            const float n = static_cast<float>(clip.pts.size());
+            clip.circle = true;
+            clip.ccx = centre.x;
+            clip.ccy = centre.y;
+            const float outer = radius * 1.002f + 0.01f;
+            const float inner = std::max(0.0f, radius * std::cos(3.14159265f / n) * 0.998f - 0.01f);
+            clip.rOut2 = outer * outer;
+            clip.rIn2 = inner * inner;
         }
     }
     clips_.push_back(std::move(clip));
@@ -585,6 +648,24 @@ void Renderer::DrawText(const Cmd& cmd) {
     pass(cmd.fill.Argb(), 0, 0);
 }
 
+bool Renderer::CanReplay(const std::shared_ptr<const Scene>& scene, const IBackend& backend, int viewW, int viewH, uint32_t fonts, uint64_t images) const {
+    const BakedFrame* b = baked_.get();
+    return b != nullptr && b->scene.get() == scene.get() && b->backend == &backend && b->viewW == viewW && b->viewH == viewH &&
+           b->fonts == fonts && b->images == images;
+}
+
+bool Renderer::Replay(IBackend& backend) {
+    bool ok = true;
+    for (const BakedBatch& batch : baked_->batches) {
+        if (!backend.Draw(batch.v.data(), static_cast<int>(batch.v.size()), batch.i.data(), static_cast<int>(batch.i.size()), batch.texture)) ok = false;
+        ++frame_.drawCalls;
+    }
+    frame_.triangles = baked_->triangles;
+    frame_.commandsDrawn = baked_->scene->cmds.size();
+    ++frame_.replays;
+    return ok;
+}
+
 RenderResult Renderer::Render(IBackend& backend) {
     const std::shared_ptr<const Scene> scene = CurrentScene();
     if (!scene || (scene->cmds.empty() && !scene->background)) return RenderResult::Nothing;
@@ -602,19 +683,53 @@ RenderResult Renderer::Render(IBackend& backend) {
     batchV_.clear();
     batchI_.clear();
     batchTexture_ = 0;
+    uint64_t imagesNow = 0;
+    {
+        std::lock_guard<std::mutex> lockGuard(lock_);
+        imagesNow = imageVersion_;
+    }
+    const uint32_t fontsNow = glyphs_.Generation();
     SyncImages();
 
-    const float s = std::min(static_cast<float>(viewW) / static_cast<float>(scene->w), static_cast<float>(viewH) / static_cast<float>(scene->h));
-    current_ = Mat::Translate((static_cast<float>(viewW) - static_cast<float>(scene->w) * s) * 0.5f,
-                              (static_cast<float>(viewH) - static_cast<float>(scene->h) * s) * 0.5f)
-                   .Times(Mat::ScaleBy(s, s));
-
     if (scene->background && backend.HasBackground()) backend.DrawBackground();
-    for (const Cmd& cmd : scene->cmds) {
-        DrawCommand(cmd);
-        ++frame_.commandsDrawn;
+
+    if (CanReplay(scene, backend, viewW, viewH, fontsNow, imagesNow)) {
+        if (!Replay(backend)) failed_ = true;
+        if (failed_) InvalidateFrameCache();
+    } else {
+        // Tessellate: interpret the commands, recording each batch as it goes to the backend.
+        baked_.reset();
+        building_ = std::make_unique<BakedFrame>();
+        building_->scene = scene;
+        building_->backend = &backend;
+        building_->viewW = viewW;
+        building_->viewH = viewH;
+        building_->fonts = fontsNow;
+        building_->images = imagesNow;
+        ++frame_.tessellations;
+
+        const float s = std::min(static_cast<float>(viewW) / static_cast<float>(scene->w), static_cast<float>(viewH) / static_cast<float>(scene->h));
+        current_ = Mat::Translate((static_cast<float>(viewW) - static_cast<float>(scene->w) * s) * 0.5f,
+                                  (static_cast<float>(viewH) - static_cast<float>(scene->h) * s) * 0.5f)
+                       .Times(Mat::ScaleBy(s, s));
+        for (const Cmd& cmd : scene->cmds) {
+            DrawCommand(cmd);
+            ++frame_.commandsDrawn;
+        }
+        Flush();
+
+        // Kept only when the frame is complete and everything it points to is still what it was: no failure, no missing
+        // picture (it may arrive), no glyph that did not fit, no cell evicted while drawing, no font or image change on the way.
+        uint64_t imagesAfter = 0;
+        {
+            std::lock_guard<std::mutex> lockGuard(lock_);
+            imagesAfter = imageVersion_;
+        }
+        const bool keep = !failed_ && frame_.missingImages == 0 && frame_.glyphFailures == 0 && frame_.atlasEvictions == 0 &&
+                          glyphs_.Generation() == fontsNow && imagesAfter == imagesNow && building_->vertices <= kMaxBakedVertices;
+        if (keep) baked_ = std::move(building_);
+        building_.reset();
     }
-    Flush();
 
     {
         std::lock_guard<std::mutex> lockGuard(lock_);
@@ -628,6 +743,8 @@ RenderResult Renderer::Render(IBackend& backend) {
         stats_.atlasEvictions += frame_.atlasEvictions;
         stats_.triangles += frame_.triangles;
         stats_.drawCalls += frame_.drawCalls;
+        stats_.tessellations += frame_.tessellations;
+        stats_.replays += frame_.replays;
     }
     return failed_ ? RenderResult::Failed : RenderResult::Drawn;
 }

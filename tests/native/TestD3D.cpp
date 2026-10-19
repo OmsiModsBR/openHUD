@@ -543,3 +543,57 @@ TEST(d3d9_layer, "d3d9.layer-through-the-present-and-reset-hooks") {
     read(px, w, h);
     CHECK(Near(At(px, w, 40, 20), 128, 128, 128, 0));
 }
+
+TEST(d3d9_layer_cache, "d3d9.layer-tessellates-a-scene-once-and-again-after-a-reset") {
+    Env env;
+    RequireDevice(env, 480, 270);
+    FakeBridge fake;
+    fake.gameDevice = env.device;
+    DrawLayer layer;
+    CHECK(layer.Start(&fake.table) == 0 && layer.HooksInstalled());
+    IDirect3DDevice9* dev = env.device;
+    const auto has = [](const std::string& text, const char* needle) { return text.find(needle) != std::string::npos; };
+    const auto number = [&](const char* key) {
+        const std::string stats = Run(layer, "stats", "{}");
+        const std::string needle = std::string("\"") + key + "\":";
+        const size_t at = stats.find(needle);
+        if (at == std::string::npos) throw t::Failure{"stats has no " + std::string(key) + ": " + stats};
+        return std::stoll(stats.substr(at + needle.size()));
+    };
+    std::vector<uint8_t> px;
+    int w = 0, h = 0;
+    std::string why;
+
+    CHECK(has(Run(layer, "scene", Vector("scene-minimal.json")), "\"ok\":true"));
+    for (int i = 0; i < 4; ++i) {
+        Clear(dev, 0xFF808080u);
+        CHECK(fake.CallPresent(dev) == S_OK);
+    }
+    CHECK_MSG(number("tessellations") == 1 && number("replays") == 3, "one tessellation, three replays: " + Run(layer, "stats", "{}"));
+    if (!ReadBack(dev, w, h, px, why)) SKIP(why);
+    CHECK(Near(At(px, w, 40, 20), 36, 39, 43, 3));   // the replayed frame is on the device
+
+    // A new scene.
+    CHECK(has(Run(layer, "scene", Vector("scene-pause.json")), "\"ok\":true"));
+    Clear(dev, 0xFF808080u);
+    fake.CallPresent(dev);
+    CHECK(number("tessellations") == 2);
+
+    // A Reset of the device, through the hook: the frame is built again afterwards, and drawn right.
+    Clear(dev, 0xFF808080u);
+    fake.CallPresent(dev);
+    CHECK(number("tessellations") == 2 && number("replays") == 4);
+    FakeBridge::resetPerforms = dev;
+    CHECK(SUCCEEDED(fake.CallReset(dev, &env.pp)));
+    FakeBridge::resetPerforms = nullptr;
+    Clear(dev, 0xFF808080u);
+    fake.CallPresent(dev);
+    CHECK_MSG(number("tessellations") == 3, "tessellated again after the Reset: " + Run(layer, "stats", "{}"));
+    if (!ReadBack(dev, w, h, px, why)) SKIP(why);
+    CHECK(Near(At(px, w, 200, 110), 0, 201, 74, 3));   // the button of the pause scene
+    Clear(dev, 0xFF808080u);
+    fake.CallPresent(dev);
+    CHECK(number("tessellations") == 3 && number("replays") == 5);
+
+    layer.Stop();
+}

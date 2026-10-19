@@ -1,4 +1,4 @@
-﻿#include "Kit.h"
+#include "Kit.h"
 
 #include <chrono>
 #include <cstring>
@@ -584,4 +584,42 @@ TEST(raster_nothing, "raster.empty-scene-and-no-scene") {
     f.Load(Doc(Rect(0, 0, 50, 50, "#ff0000"), 50, 50));
     f.Load(Doc(Rect(0, 0, 50, 50, "#00ff00"), 50, 50));
     CHECK(f.Draw() == RenderResult::Drawn && Near(Px(f.soft, 10, 10), 0, 255, 0, 0));
+}
+
+
+TEST(raster_circle_clip_shortcuts, "raster.circle-clip-shortcuts-draw-what-the-general-clip-draws") {
+    // The tests of a triangle against the clip circle must never change a pixel: the same random scenes with the shortcuts
+    // on and off are identical, whatever the circle's size, place, rotation and the shapes drawn under it.
+    unsigned seed = 4242;
+    const auto next = [&](int range) { seed = seed * 1664525u + 1013904223u; return static_cast<int>((seed >> 8) % static_cast<unsigned>(range)); };
+    for (int round = 0; round < 12; ++round) {
+        std::string cmds;
+        const int cx = 60 + next(80), cy = 60 + next(80), r = 20 + next(60);
+        if (round % 3 == 1) cmds += "{\"t\":\"push\",\"tx\":" + std::to_string(next(20)) + ",\"ty\":" + std::to_string(next(20)) + ",\"rot\":" + std::to_string(next(360)) + ",\"sx\":1.3,\"sy\":1.3},";
+        cmds += "{\"t\":\"clip\",\"kind\":\"circle\",\"cx\":" + std::to_string(cx) + ",\"cy\":" + std::to_string(cy) + ",\"r\":" + std::to_string(r) + "}";
+        for (int i = 0; i < 60; ++i) {
+            const int x = next(200), y = next(200);
+            switch (i % 4) {
+            case 0: cmds += ",{\"t\":\"poly\",\"pts\":[" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(x + next(60)) + "," + std::to_string(y + next(20)) + "," + std::to_string(x + next(50)) + "," + std::to_string(y + next(60)) + "],\"fill\":\"#40a0e0c0\",\"closed\":true}"; break;
+            case 1: cmds += ",{\"t\":\"poly\",\"pts\":[" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(x + next(90)) + "," + std::to_string(y + next(40)) + "],\"stroke\":\"#ffffff\",\"sw\":" + std::to_string(1 + next(6)) + ",\"closed\":false}"; break;
+            case 2: cmds += ",{\"t\":\"circle\",\"cx\":" + std::to_string(x) + ",\"cy\":" + std::to_string(y) + ",\"r\":" + std::to_string(2 + next(40)) + ",\"fill\":\"#e0a020b0\"}"; break;
+            default: cmds += ",{\"t\":\"rect\",\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) + ",\"w\":" + std::to_string(5 + next(120)) + ",\"h\":" + std::to_string(5 + next(80)) + ",\"fill\":\"#30c050a0\",\"r\":" + std::to_string(next(10)) + "}"; break;
+            }
+        }
+        // A circle of a very large radius, a tiny one and one that misses the surface altogether.
+        if (round == 3) cmds += ",{\"t\":\"unclip\"},{\"t\":\"clip\",\"kind\":\"circle\",\"cx\":100,\"cy\":100,\"r\":5000},{\"t\":\"rect\",\"x\":10,\"y\":10,\"w\":180,\"h\":180,\"fill\":\"#ffffff80\"}";
+        if (round == 5) cmds += ",{\"t\":\"unclip\"},{\"t\":\"clip\",\"kind\":\"circle\",\"cx\":100,\"cy\":100,\"r\":0.4},{\"t\":\"rect\",\"x\":0,\"y\":0,\"w\":200,\"h\":200,\"fill\":\"#ffffff\"}";
+        if (round == 6) cmds += ",{\"t\":\"unclip\"},{\"t\":\"clip\",\"kind\":\"circle\",\"cx\":900,\"cy\":900,\"r\":30},{\"t\":\"rect\",\"x\":0,\"y\":0,\"w\":200,\"h\":200,\"fill\":\"#ffffff\"}";
+        const std::string json = Doc(cmds, 200, 200);
+        Fixture on(200, 200), off(200, 200);
+        off.renderer.SetCircleClipShortcuts(false);
+        on.Run(json);
+        off.Run(json);
+        CHECK_MSG(on.soft.Pixels() == off.soft.Pixels(), "round " + std::to_string(round) + ": the shortcuts changed the picture");
+        int lit = 0;
+        for (int y = 0; y < 200; ++y) {
+            for (int x = 0; x < 200; ++x) lit += Px(on.soft, x, y).g > 20 ? 1 : 0;
+        }
+        CHECK_MSG(lit > 50 || round % 3 == 1 || round == 5 || round == 6, "round " + std::to_string(round) + " drew something: " + std::to_string(lit));
+    }
 }

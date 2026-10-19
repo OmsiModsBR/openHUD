@@ -11,5 +11,6 @@ internal static class CoreGates
         PauseMenuGates.Register();
         RealmapGates.Register();
         ModelGates.Register();
+        SvgGates.Register();
     }
 }

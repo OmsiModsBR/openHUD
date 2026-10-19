@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using OmsiLaunch.Api;
 using OmsiLaunch.Runtime.Modules;
+using OpenHud.Art;
 using OpenHud.Bridge;
 using OpenHud.Draw;
 using OpenHud.I18n;
@@ -52,6 +53,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
     private FullMapSceneBuilder fullBuilder = new();
     private RadarOptions radarOptions = new();
     private RadarTexts texts = new();
+    private string footerVersions = "";
 
     private PauseMenu? menu;
     private PauseMachine? machine;
@@ -124,6 +126,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         languageCode = LanguageResolver.PackageCode(settings.Language, null);
         texts = Look.Texts(ui);
         radarOptions = RadarOptionsFor(settings) with { ZoomStep = ZoomStepFor(settings.RadarZoom) };
+        footerVersions = FooterVersions(context);
 
         native = new NativeLink(Safe<IModuleNativeComponent?>(() => context.NativeComponent, null));
         drawAvailable = native.Available;
@@ -145,6 +148,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         {
             publisher = new PauseScenePublisher();
             menu = new PauseMenu(Look.MenuLookup(ui), PauseIdentity.Generic, languageCode);
+            menu.SetFooterVersions(footerVersions);
             menu.SetViewport(new MenuViewport(MenuScene.CanvasWidth, MenuScene.CanvasHeight, 1, settings.UiScale));
             pauseGame = new PauseGameAdapter(context.Runtime);
             machine = new PauseMachine(pauseGame, new PauseInputAdapter(input), new PauseBackgroundAdapter(native), publisher, clock, menu);
@@ -281,7 +285,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         Array.Clear(askedMap);
         if (reader is not null) frames = new FrameSource(reader, new FrameSourceOptions { TileMetres = next.TileMetres });
         uploads.Replace(next.Uploads);
-        menu?.SetIdentity(Look.Identity(next.PauseMenu.Identity, languageCode, ui, next.SymbolImage));
+        menu?.SetIdentity(Look.Identity(next.PauseMenu.Identity, languageCode, ui, next.SymbolImage, next.Glyphs));
         BuildSceneBuilders(next);
         lastRadarSignature = 0;
         lastPauseStamp = long.MinValue;
@@ -293,6 +297,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
             ["pausemenu"] = next.PauseMenu.Status.ToString(),
             ["fonts"] = next.FontCount.ToString(CultureInfo.InvariantCulture),
             ["images"] = next.ImageCount.ToString(CultureInfo.InvariantCulture),
+            ["vector_symbols"] = next.Glyphs.VectorCount.ToString(CultureInfo.InvariantCulture),
         };
         var diagnostics = next.Realmap.Diagnostics.Select(d => "realmap " + d).Concat(next.PauseMenu.Diagnostics.Select(d => "pausemenu " + d)).Concat(next.Notes).Take(12).ToList();
         if (diagnostics.Count > 0) data["diagnostics"] = Clip(string.Join(" | ", diagnostics), 700);
@@ -302,10 +307,11 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
 
     private void BuildSceneBuilders(LoadedMap? loaded)
     {
-        var theme = Look.Theme(loaded?.PauseMenu.Identity);
+        var theme = Look.Theme(loaded?.PauseMenu.Identity, loaded?.Palette);
         ITextMeasurer text = measurer is not null ? measurer : new ApproximateTextMeasurer();
-        radarBuilder = new RadarSceneBuilder(theme, texts, text);
-        fullBuilder = new FullMapSceneBuilder(theme, texts, text);
+        var art = new RadarArt { StopIcon = loaded?.Glyphs.StopIcon ?? Glyph.None };
+        radarBuilder = new RadarSceneBuilder(theme, texts, text, art);
+        fullBuilder = new FullMapSceneBuilder(theme, texts, text, art);
     }
 
     private void RefreshLines(FrameSnapshot frame)
@@ -360,10 +366,11 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         var set = Features(MapQuery.Radar, player.WorldX, player.WorldY, radius * 1.15, DetailForRadius(radius), radius <= 200, MinVisible(radius / radarOptions.Radius), now);
         var sameKind = lastKind == "radar";
         if (sameKind && now - lastRadarSentAt < MinRadarIntervalMs) return;
-        var signature = RadarModels.Signature(frame, player, set?.Id ?? 0, radarOptions.ZoomStep, mapSerial);
+        var speedValue = UnitFormat.SpeedValue(player.SpeedMetresPerSecond, settings.Units);
+        var signature = RadarModels.Signature(frame, player, set?.Id ?? 0, radarOptions.ZoomStep, mapSerial, radius / radarOptions.Radius, speedValue);
         if (sameKind && signature == lastRadarSignature) { counters.ScenesSkipped++; return; }
 
-        var model = RadarModels.Build(frame, player, map?.Frame ?? IdentityFrame, set, null);
+        var model = RadarModels.Build(frame, player, map?.Frame ?? IdentityFrame, set, null, map?.Realmap.Manifest?.Player, UnitFormat.Speed(player.SpeedMetresPerSecond, settings.Units, texts));
         var scene = SceneOpacity.Apply(radarBuilder.Build(model, radarOptions), settings.RadarOpacityPercent);
         var json = SceneJson.Encode(scene);
         if (sameKind && json == lastJson) { counters.ScenesSkipped++; lastRadarSignature = signature; lastRadarSentAt = now; return; }
@@ -378,7 +385,7 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
         var height = MenuScene.CanvasHeight;
         var cx = s.RadarCorner is RadarCorner.TopLeft or RadarCorner.BottomLeft ? margin + radius : width - margin - radius;
         var cy = s.RadarCorner is RadarCorner.TopLeft or RadarCorner.TopRight ? margin + radius : height - margin - strip - radius;
-        return new RadarOptions { CanvasWidth = width, CanvasHeight = height, CenterX = cx, CenterY = cy, Radius = radius, Mode = RadarMode.HeadingUp, MaxCommands = 1500, MaxPoints = 6000 };
+        return new RadarOptions { CanvasWidth = width, CanvasHeight = height, CenterX = cx, CenterY = cy, Radius = radius, Mode = RadarMode.HeadingUp, MaxCommands = 1500, MaxPoints = 6000, Units = s.Units };
     }
 
     private static int ZoomStepFor(RadarZoom zoom) => zoom switch { RadarZoom.Near => 1, RadarZoom.Far => 3, _ => 2 };
@@ -441,9 +448,9 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
 
         var pose = frame is null ? null : RadarModels.PlayerFor(frame, out _);
         var model = frame is not null && pose is not null
-            ? RadarModels.Build(frame, pose, mapFrame, set, radarLines)
+            ? RadarModels.Build(frame, pose, mapFrame, set, radarLines, map?.Realmap.Manifest?.Player)
             : new RadarModel(new RadarPlayer(displayX, displayY, 0), set?.Features, set?.Regions, set?.Markers, Array.Empty<RadarVehicle>(), null, null, radarLines);
-        var options = new FullMapOptions { CanvasWidth = width, CanvasHeight = height, Margin = 0, SidePanelWidth = 0, OverBackground = false, MaxCommands = 7200, MaxVehicles = 120, MaxMarkers = 120 };
+        var options = new FullMapOptions { CanvasWidth = width, CanvasHeight = height, Margin = 0, SidePanelWidth = 0, OverBackground = false, MaxCommands = 6900, MaxVehicles = 120, MaxMarkers = 120, Units = settings.Units };
         return fullBuilder.Build(model, view, options);
     }
 
@@ -702,6 +709,16 @@ public sealed class HudModule : IRuntimeModule, ITickingModule
     private void Emit(string name, IReadOnlyDictionary<string, string>? data = null)
     {
         try { context?.Emit(name, data); } catch (Exception) { /* an event the bridge refuses is not worth a failure */ }
+    }
+
+    // "openHUD 0.1.0 · OMSI 2.3.004" for the pause menu's footer; just the openHUD part when the game's version is unknown.
+    private string FooterVersions(IRuntimeModuleContext context)
+    {
+        var version = typeof(HudModule).Assembly.GetName().Version;
+        var own = version is null ? "" : version.Major + "." + version.Minor + "." + version.Build;
+        var omsi = Safe(() => context.OmsiVersion, "").Trim();
+        if (omsi.Length == 0 || omsi.Equals("unknown", StringComparison.OrdinalIgnoreCase)) return "openHUD " + own;
+        return Strings.Format("UI_PAUSE_FOOTER_VERSIONS", ui, own, omsi);
     }
 
     private static T Safe<T>(Func<T> read, T fallback)

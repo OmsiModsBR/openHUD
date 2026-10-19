@@ -13,13 +13,15 @@ public sealed class RadarSceneBuilder
     private readonly RadarTheme theme;
     private readonly RadarTexts texts;
     private readonly ITextMeasurer measurer;
+    private readonly RadarArt art;
 
-    public RadarSceneBuilder(RadarTheme? theme = null, RadarTexts? texts = null, ITextMeasurer? measurer = null)
+    public RadarSceneBuilder(RadarTheme? theme = null, RadarTexts? texts = null, ITextMeasurer? measurer = null, RadarArt? art = null)
     {
         this.theme = theme ?? new RadarTheme();
         this.theme.Validate();
         this.texts = texts ?? new RadarTexts();
         this.measurer = measurer ?? new ApproximateTextMeasurer();
+        this.art = art ?? RadarArt.None;
     }
 
     // Commands the fixed parts may use besides vehicles, markers and the map layers.
@@ -49,7 +51,9 @@ public sealed class RadarSceneBuilder
         int maxVehicles = Math.Clamp(options.MaxVehicles, 0, 400);
         int maxMarkers = Math.Clamp(options.MaxMarkers, 0, 400);
         int maxCommands = Math.Clamp(options.MaxCommands, 128, SceneLimits.MaxCommands - 128);
-        int featureBudget = maxCommands - FixedReserve - maxVehicles - maxMarkers;
+        // Markers drawn with vector art cost several commands each; half the cap is reserved for them.
+        int artExtra = art.StopIcon.IsEmpty ? 0 : maxMarkers / 2 * Math.Max(0, art.StopIcon.CommandCount - 1);
+        int featureBudget = Math.Max(0, maxCommands - FixedReserve - maxVehicles - maxMarkers - artExtra);
         var budget = new MapBudget(featureBudget, Math.Clamp(options.MaxPoints, 0, 60000));
 
         var view = new MapView(px, py, cx, cy, scale, heading, cx - r, cy - r, cx + r, cy + r);
@@ -63,13 +67,13 @@ public sealed class RadarSceneBuilder
         map.DrawFeatures(b, model.Features, view, budget);
         DrawRegions(b, model.Regions, view, InCircle, 12, 13);
         map.DrawRoute(b, model.Route, view, 4, 24);
-        map.DrawMarkers(b, model.Markers, view, maxMarkers, InCircle);
+        map.DrawMarkers(b, model.Markers, view, maxMarkers, InCircle, art);
         map.DrawVehicles(b, model.Vehicles, view, maxVehicles, InCircle);
-        map.DrawPlayer(b, view, new RadarPlayer(px, py, playerHeading), 11);
+        map.DrawPlayer(b, view, new RadarPlayer(px, py, playerHeading, player.Color, player.Triangle), 11);
         b.Unclip();
 
         DrawRing(b, cx, cy, r, heading);
-        b.Text(cx, cy + r - 16, ZoomLabel(meters), 11, "medium", theme.TextDim, "c", "mid", null, SceneColor.WithAlpha(theme.Backdrop, 0.8));
+        b.Text(cx, cy + r - 16, ZoomLabel(meters, options.Units, texts), 11, "medium", theme.TextDim, "c", "mid", null, SceneColor.WithAlpha(theme.Backdrop, 0.8));
         DrawInfo(b, model.Info, cx, cy, r, w, h);
         return b.Build();
     }
@@ -119,8 +123,8 @@ public sealed class RadarSceneBuilder
     private void DrawInfo(SceneBuilder b, RadarInfo? info, double cx, double cy, double r, int canvasW, int canvasH)
     {
         if (info is null) return;
-        string? stop = Clip(info.NextStop, 48), clock = Clip(info.Clock, 12), line = Clip(info.Line, 8);
-        if (string.IsNullOrEmpty(stop) && string.IsNullOrEmpty(clock) && string.IsNullOrEmpty(line)) return;
+        string? stop = Clip(info.NextStop, 48), clock = Clip(info.Clock, 12), line = Clip(info.Line, 8), speed = Clip(info.Speed, 14);
+        if (string.IsNullOrEmpty(stop) && string.IsNullOrEmpty(clock) && string.IsNullOrEmpty(line) && string.IsNullOrEmpty(speed)) return;
 
         const double height = 30;
         double x = cx - r, wide = 2 * r;
@@ -140,6 +144,16 @@ public sealed class RadarSceneBuilder
             b.Text(right, y + height / 2, clock!, 15, "bold", theme.Text, "r", "mid");
             right -= measurer.Measure(clock!, 15, "bold") + 10;
         }
+        if (!string.IsNullOrEmpty(speed))
+        {
+            // The speed sits at the left edge of what is free; the next stop (when there is one) takes the rest.
+            double speedWidth = measurer.Measure(speed!, 15, "bold");
+            if (right - left > speedWidth + 4)
+            {
+                b.Text(left, y + height / 2, speed!, 15, "bold", theme.Text, "l", "mid", Round(right - left));
+                left += speedWidth + 12;
+            }
+        }
         if (!string.IsNullOrEmpty(stop) && right - left > 24)
         {
             string label = Clip(texts.NextStop, 16) ?? "";
@@ -155,10 +169,9 @@ public sealed class RadarSceneBuilder
 
     // ---- helpers ------------------------------------------------------------------------
 
-    internal static string ZoomLabel(double meters) =>
-        meters >= 1000
-            ? (meters / 1000).ToString("0.##", CultureInfo.InvariantCulture) + " km"
-            : meters.ToString("0", CultureInfo.InvariantCulture) + " m";
+    internal static string ZoomLabel(double meters) => ZoomLabel(meters, OpenHud.Settings.UnitSystem.Metric, new RadarTexts());
+
+    internal static string ZoomLabel(double meters, OpenHud.Settings.UnitSystem units, RadarTexts texts) => UnitFormat.Distance(meters, units, texts);
 
     internal static (double x, double y) Polar(double cx, double cy, double radius, double angleDegrees)
     {

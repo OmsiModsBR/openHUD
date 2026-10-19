@@ -194,7 +194,7 @@ internal static class DocsGates
         yield return new("layout = fancy", Id, "identity.cfg", "layout must be classic or openhud; default used", Replace("layout = classic", "layout = fancy"));
         yield return new("a second title line", Id, "identity.cfg", "duplicate key 'title' (the first one counts)", Replace("title.ENG = Example City", "title = Another"));
         yield return new("a line with no equals sign", Id, "identity.cfg", "not a key = value line", Replace("theme = green", "theme green"));
-        yield return new("an SVG with a DOCTYPE", "symbols/stop.svg", "identity.cfg", "no <svg> root element", Replace("<svg ", "<!DOCTYPE svg><svg "));
+        yield return new("an SVG with a DOCTYPE", "symbols/stop.svg", "identity.cfg", "a DOCTYPE declaration is refused (it can define entities and load external files); remove the <!DOCTYPE ...> line", Replace("<svg ", "<!DOCTYPE svg><svg "));
         yield return new("a PNG of 3000 x 10", "", "identity.cfg", "PNG is 3000x10, the limit is 2048x2048", Setup: d => d.Write("openomsi-pausemenu/symbols/map-symbol-green.png", Synthetic.Png(3000, 10)));
         yield return new("a text file named .png", "", "identity.cfg", "not a PNG (signature)", Setup: d => d.Write("openomsi-pausemenu/symbols/map-symbol-green.png", new string('x', 80)));
         yield return new("no FONTS-LICENSE.txt", "", "fonts/", "fonts/FONTS-LICENSE.txt is missing or empty; the system font is used", Setup: d => File.Delete(d.Combine("openomsi-pausemenu/fonts/FONTS-LICENSE.txt")));

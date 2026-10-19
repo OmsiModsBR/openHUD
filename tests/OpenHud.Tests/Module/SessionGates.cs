@@ -13,7 +13,8 @@ internal static class SessionGates
         Gates.Run("module.session-throttle-and-change-detection", Throttle);
         Gates.Run("module.session-realmap-reaches-the-scene", RealmapReachesTheScene);
         Gates.Run("module.session-pause-package-fonts-and-symbol", PausePackage);
-        Gates.Run("module.session-svg-symbol-is-skipped-with-a-reason", SvgSymbolSkipped);
+        Gates.Run("module.session-svg-symbol-is-drawn", SvgSymbolDrawn);
+        Gates.Run("module.session-svg-symbol-over-budget-is-refused-with-a-reason", SvgSymbolRefused);
         Gates.Run("module.session-north-rotation", NorthRotation);
         Gates.Run("module.session-corner-size-opacity-language", SettingsShapeTheScene);
         Gates.Run("module.session-reads-only-declared-operations", OnlyDeclared);
@@ -113,17 +114,50 @@ internal static class SessionGates
         s.CheckAllScenesValid("pause package");
     }
 
-    private static void SvgSymbolSkipped()
+    private static void SvgSymbolDrawn()
     {
         using var s = new Session();
         PackageKit.Install(s, PackageKit.Surface(), pausePackage: true);
         File.WriteAllText(Path.Combine(s.MapsRoot, "openomsi-pausemenu", "identity.cfg"), "format = 1\ntitle = Svg Map\nsymbol = symbols/wordmark.svg\n");
+        File.WriteAllText(Path.Combine(s.MapsRoot, "openomsi-pausemenu", "symbols", "wordmark.svg"),
+            "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\"><circle cx=\"24\" cy=\"24\" r=\"20\" fill=\"#ff8800\"/><path d=\"M10 24 L24 10 L38 24 L24 38 Z\" fill=\"#ffffff\"/></svg>");
         s.Start();
         Gates.Check(s.WaitForPackages(), "the packages are adopted");
         s.Tick(5);
-        Gates.Check(!s.Native.Images.Contains("pkg.symbol"), "an SVG symbol is not registered");
+        Gates.Check(!s.Native.Images.Contains("pkg.symbol"), "a vector symbol is not sent as a picture");
         var packages = s.Context.Events.Single(e => e.Name == "packages");
-        Gates.Check(packages.Data!["diagnostics"].Contains("SVG"), "the reason is logged: " + packages.Data["diagnostics"]);
+        Gates.Check(packages.Data!["vector_symbols"] == "1" && packages.Data["pausemenu"] == "Loaded", "the report counts the vector symbol: " + string.Join(",", packages.Data.Select(x => x.Key + "=" + x.Value)));
+        s.Pause.UserPauses();
+        s.Tick(3);
+        Gates.Check(s.Native.LastSceneDrawsMenu, "the menu opens");
+        var menu = Last(s);
+        Gates.Check(!menu.Commands.OfType<ImageCommand>().Any(), "no picture is referenced that was never registered");
+        var circle = menu.Commands.OfType<CircleCommand>().FirstOrDefault(c => c.Fill == "#ff8800");
+        Gates.Check(circle is not null, "the header draws the symbol's circle");
+        var diamond = menu.Commands.OfType<PolyCommand>().FirstOrDefault(p => p.Fill == "#ffffff" && p.Closed == true);
+        Gates.Check(diamond is not null && diamond.Points.Length == 8, "...and its diamond");
+        // Both land inside the symbol's 48 x 48 slot (design units 24,12 .. 72,60).
+        var view = s.Status()["view"].Split('x');
+        var g = new OpenHud.Pause.MenuGeometry(new OpenHud.Pause.MenuViewport(int.Parse(view[0]), int.Parse(view[1]), 1, 1));
+        var slot = g.ToCanvas(OpenHud.Pause.MenuGeometry.Symbol);
+        Gates.Check(circle!.Cx > slot.X && circle.Cx < slot.X + slot.W && circle.Cy > slot.Y && circle.Cy < slot.Y + slot.H, "the circle lies in the symbol slot");
+        s.CheckAllScenesValid("vector symbol");
+    }
+
+    private static void SvgSymbolRefused()
+    {
+        using var s = new Session();
+        PackageKit.Install(s, PackageKit.Surface(), pausePackage: true);
+        File.WriteAllText(Path.Combine(s.MapsRoot, "openomsi-pausemenu", "identity.cfg"), "format = 1\ntitle = Svg Map\nsymbol = symbols/wordmark.svg\n");
+        // Valid for the probe, too much for the per-symbol budget of 160 drawing commands.
+        File.WriteAllText(Path.Combine(s.MapsRoot, "openomsi-pausemenu", "symbols", "wordmark.svg"),
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">" + string.Concat(Enumerable.Range(0, 200).Select(i => "<rect x=\"" + i % 90 + "\" y=\"" + i / 3 % 90 + "\" width=\"3\" height=\"3\"/>")) + "</svg>");
+        s.Start();
+        Gates.Check(s.WaitForPackages(), "the packages are adopted");
+        s.Tick(5);
+        var packages = s.Context.Events.Single(e => e.Name == "packages");
+        Gates.Check(packages.Data!["diagnostics"].Contains("drawing commands") && packages.Data["diagnostics"].Contains("generic mark"), "the reason is logged: " + packages.Data["diagnostics"]);
+        Gates.Check(packages.Data["vector_symbols"] == "0", "nothing was drawn from it");
         s.Pause.UserPauses();
         s.Tick(3);
         Gates.Check(s.Native.LastSceneDrawsMenu, "the menu still opens, with the generic mark");

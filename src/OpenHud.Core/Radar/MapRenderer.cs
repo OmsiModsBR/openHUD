@@ -367,7 +367,7 @@ internal sealed class MapRenderer
         foreach (var r in runs) b.Poly(r, null, theme.Route, widthPx, false);
     }
 
-    public int DrawMarkers(SceneBuilder b, IReadOnlyList<RadarMarker>? markers, MapView view, int cap, Func<double, double, bool> visible)
+    public int DrawMarkers(SceneBuilder b, IReadOnlyList<RadarMarker>? markers, MapView view, int cap, Func<double, double, bool> visible, RadarArt? art = null)
     {
         if (markers is null || cap <= 0) return 0;
         var picked = new List<(double d, int i, double x, double y)>();
@@ -379,12 +379,22 @@ internal sealed class MapRenderer
             picked.Add((dx * dx + dy * dy, i, sx, sy));
         }
         picked.Sort((a, c) => a.d != c.d ? a.d.CompareTo(c.d) : a.i.CompareTo(c.i));
-        int emitted = 0;
+        int emitted = 0, withArt = 0;
+        var stop = art?.StopIcon ?? OpenHud.Art.Glyph.None;
+        var artCap = Math.Max(1, cap / 2); // the scene builders reserved commands for this many
         foreach (var p in picked)
         {
             if (emitted >= cap) break;
             var m = markers[p.i];
             if (!string.IsNullOrEmpty(m.IconId)) b.Image(m.IconId!, Round(p.x - 9), Round(p.y - 9), 18, 18, null, m.Color is not null && SceneColor.IsValid(m.Color) ? m.Color : null);
+            else if (!stop.IsEmpty && withArt < artCap)
+            {
+                // The package's stop icon stands in for the dot; a marker tint only reaches a picture.
+                var list = new List<SceneCommand>(stop.CommandCount);
+                stop.AppendTo(list, Round(p.x - 9), Round(p.y - 9), 18, 18, 1, m.Color is not null && SceneColor.IsValid(m.Color) ? m.Color : null);
+                foreach (var command in list) b.Add(command);
+                withArt++;
+            }
             else b.Circle(Round(p.x), Round(p.y), 4, SceneColor.Or(m.Color, theme.Marker), theme.PlayerOutline, 1);
             emitted++;
         }
@@ -419,7 +429,10 @@ internal sealed class MapRenderer
     public void DrawPlayer(SceneBuilder b, MapView view, RadarPlayer player, double size)
     {
         double heading = double.IsFinite(player.HeadingDegrees) ? player.HeadingDegrees : 0;
-        b.Poly(Arrow(view.ScreenX, view.ScreenY, heading - view.HeadingDegrees, size, size * 0.7, 0.5), theme.PlayerFill, theme.PlayerOutline, 2, true);
+        // A package may ask for a plain triangle (no notch) and a fill of its own.
+        var points = Arrow(view.ScreenX, view.ScreenY, heading - view.HeadingDegrees, size, size * 0.7, 0.5);
+        if (player.Triangle) points = new[] { points[0], points[1], points[2], points[3], points[6], points[7] };
+        b.Poly(points, SceneColor.Or(player.Color, theme.PlayerFill), theme.PlayerOutline, 2, true);
     }
 
     // A chevron: tip ahead of the center, two rear corners, a notch between them.

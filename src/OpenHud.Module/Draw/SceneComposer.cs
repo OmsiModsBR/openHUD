@@ -16,6 +16,7 @@ internal static class SceneComposer
         ImageDraw i => new ImageCommand(i.Id, i.X, i.Y, i.W, i.H, i.Opacity < 1 ? i.Opacity : null, i.Tint),
         ClipDraw k => new ClipRectCommand(k.X, k.Y, k.W, k.H),
         UnclipDraw => new UnclipCommand(),
+        RawDraw raw => raw.Command,
         _ => throw new SceneException("unknown draw record " + draw.GetType().Name),
     };
 

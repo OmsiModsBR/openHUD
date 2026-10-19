@@ -25,10 +25,11 @@ public enum RadarVehicleKind { Bus, Car, Truck, Tram, Other }
 
 public sealed record RadarVehicle(double X, double Y, double HeadingDegrees, RadarVehicleKind Kind = RadarVehicleKind.Other);
 
-public sealed record RadarPlayer(double X, double Y, double HeadingDegrees);
+/// <summary>The player's arrow. <see cref="Color"/> overrides the theme's fill; <see cref="Triangle"/> draws a plain triangle instead of the chevron.</summary>
+public sealed record RadarPlayer(double X, double Y, double HeadingDegrees, string? Color = null, bool Triangle = false);
 
-/// <summary>The clock / next-stop strip under the radar. Any member may be null.</summary>
-public sealed record RadarInfo(string? NextStop = null, string? Clock = null, string? Line = null);
+/// <summary>The strip under the radar: speed and clock, with room for the next stop and the line. Any member may be null.</summary>
+public sealed record RadarInfo(string? NextStop = null, string? Clock = null, string? Line = null, string? Speed = null);
 
 /// <summary>One row of the full map's line list.</summary>
 public sealed record RadarLine(string Name, string Color, bool Active = false);
@@ -63,6 +64,22 @@ public sealed record RadarTexts
     public string Route { get; init; } = "Route";
     public string You { get; init; } = "You";
     public string More { get; init; } = "+{0} more";
+    // Unit labels (UI_UNIT_*): the scale of the radar and the map, and the speed on the strip.
+    public string UnitKmh { get; init; } = "km/h";
+    public string UnitMph { get; init; } = "mph";
+    public string UnitM { get; init; } = "m";
+    public string UnitKm { get; init; } = "km";
+    public string UnitFt { get; init; } = "ft";
+    public string UnitMi { get; init; } = "mi";
+}
+
+/// <summary>Symbols the radar and the map draw from the map's pause-menu package. Empty members fall back to the plain shapes.</summary>
+public sealed record RadarArt
+{
+    public static RadarArt None { get; } = new();
+
+    /// <summary>Drawn at every marker that has no picture of its own (in place of a dot).</summary>
+    public OpenHud.Art.Glyph StopIcon { get; init; } = OpenHud.Art.Glyph.None;
 }
 
 /// <summary>
@@ -126,6 +143,8 @@ public sealed record RadarOptions
     public double Radius { get; init; } = 160;
     public RadarMode Mode { get; init; } = RadarMode.HeadingUp;
     public int ZoomStep { get; init; } = 2;
+    /// <summary>Metric: scale in m and km. Imperial: ft and mi.</summary>
+    public OpenHud.Settings.UnitSystem Units { get; init; } = OpenHud.Settings.UnitSystem.Metric;
     public int MaxVehicles { get; init; } = 48;
     public int MaxMarkers { get; init; } = 48;
     /// <summary>Command budget of the whole scene; must stay below the protocol cap.</summary>
@@ -178,6 +197,7 @@ public sealed record FullMapOptions
     public int CanvasWidth { get; init; } = 1920;
     public int CanvasHeight { get; init; } = 1080;
     public double Margin { get; init; } = 24;
+    public OpenHud.Settings.UnitSystem Units { get; init; } = OpenHud.Settings.UnitSystem.Metric;
     public double SidePanelWidth { get; init; } = 360;
     /// <summary>True: the scene asks for the captured pause background and dims it; false: an opaque backdrop.</summary>
     public bool OverBackground { get; init; } = true;

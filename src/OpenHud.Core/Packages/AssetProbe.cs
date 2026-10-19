@@ -55,7 +55,10 @@ public static class AssetProbe
         catch (DecoderFallbackException) { reason = "not valid UTF-8"; return false; }
         try
         {
-            if (!SvgRoot.IsMatch(text)) { reason = "no <svg> root element"; return false; }
+            // Said first and precisely: a file that opens with a DOCTYPE is refused for that, not for "no root element".
+            if (text.Contains("<!DOCTYPE", StringComparison.OrdinalIgnoreCase) || text.Contains("<!ENTITY", StringComparison.OrdinalIgnoreCase))
+            { reason = "a DOCTYPE declaration is refused (it can define entities and load external files); remove the <!DOCTYPE ...> line"; return false; }
+            if (!SvgRoot.IsMatch(text)) { reason = "no <svg> root element (only an XML declaration and comments may come before it)"; return false; }
             var lower = text.ToLowerInvariant();
             foreach (var word in SvgForbidden)
                 if (lower.Contains(word)) { reason = "contains '" + word + "', which the static subset does not allow"; return false; }

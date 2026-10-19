@@ -37,6 +37,15 @@ public static class SceneJson
 
     public static byte[] EncodeUtf8(SceneDocument scene) => Encoding.UTF8.GetBytes(Encode(scene));
 
+    /// <summary>One command as its JSON object (the same text <see cref="Encode"/> writes for it).</summary>
+    public static string EncodeCommand(SceneCommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var sb = new StringBuilder(96);
+        Write(sb, command);
+        return sb.ToString();
+    }
+
     // ---- one command -------------------------------------------------------------------
 
     private static void Write(StringBuilder sb, SceneCommand command)

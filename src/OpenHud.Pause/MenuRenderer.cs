@@ -43,18 +43,70 @@ internal static class MenuRenderer
                 break;
         }
 
-        var footer = g.ToCanvas(MenuGeometry.Footer);
-        cmds.Add(new TextDraw(footer.X, footer.Y + footer.H / 2, T(menu.Page == MenuPage.Map ? PauseStrings.MapHint : PauseStrings.Hint),
-            14 * cs, TextRole.Condensed, Muted, TextAlign.Left, TextBase.Middle, footer.W));
+        Footer(menu, g, cmds, identity, T);
 
         return new MenuScene(MenuSceneMode.Menu, MenuScene.CanvasWidth, MenuScene.CanvasHeight, true, cmds, regions);
+    }
+
+    // The footer: the hint on the left; on the right the versions and, when the package has one, its credit line.
+    private static void Footer(PauseMenu menu, MenuGeometry g, List<MenuDraw> cmds, PauseIdentity identity, Func<string, string> t)
+    {
+        var footer = g.ToCanvas(MenuGeometry.Footer);
+        double cs = g.Metrics.CanvasScale;
+        var versions = menu.FooterVersions;
+        var credit = string.IsNullOrWhiteSpace(identity.Credit) ? null : identity.Credit;
+        var rightWidth = versions is null && credit is null ? 0 : Math.Min(footer.W * 0.42, g.Length(360));
+        cmds.Add(new TextDraw(footer.X, footer.Y + footer.H / 2, t(menu.Page == MenuPage.Map ? PauseStrings.MapHint : PauseStrings.Hint),
+            14 * cs, TextRole.Condensed, Muted, TextAlign.Left, TextBase.Middle, footer.W - rightWidth - (rightWidth > 0 ? g.Length(16) : 0)));
+        if (rightWidth <= 0) return;
+        var right = footer.X + footer.W;
+        var dim = Hex.WithAlpha(White, 0x80);
+        if (versions is not null && credit is not null)
+        {
+            cmds.Add(new TextDraw(right, footer.Y + footer.H * 0.3, versions, 12 * cs, TextRole.Condensed, Muted, TextAlign.Right, TextBase.Middle, rightWidth));
+            cmds.Add(new TextDraw(right, footer.Y + footer.H * 0.74, credit, 12 * cs, TextRole.Condensed, dim, TextAlign.Right, TextBase.Middle, rightWidth));
+        }
+        else
+            cmds.Add(new TextDraw(right, footer.Y + footer.H / 2, (versions ?? credit)!, 12 * cs, TextRole.Condensed, versions is not null ? Muted : dim, TextAlign.Right, TextBase.Middle, rightWidth));
+    }
+
+    // A symbol, logo or icon fitted into a slot (already in canvas units). Pictures stay ImageDraw records.
+    private static void DrawGlyph(List<MenuDraw> cmds, OpenHud.Art.Glyph glyph, MenuRect slot)
+    {
+        if (glyph.IsEmpty) return;
+        foreach (var command in glyph.Commands(slot.X, slot.Y, slot.W, slot.H))
+            cmds.Add(command is OpenHud.Scene.ImageCommand image ? new ImageDraw(image.Id, image.X, image.Y, image.W, image.H, image.Opacity ?? 1, image.Tint) : new RawDraw(command));
+    }
+
+    // The OMSI 2 mark: the package's picture, else a generic outlined tag with a steering wheel. openHUD ships no logo of the
+    // game and writes no brand text of its own, so the generic mark is a neutral shape.
+    private static void Marks(MenuGeometry g, List<MenuDraw> cmds, PauseIdentity identity, string line)
+    {
+        var omsi = g.ToCanvas(MenuGeometry.Omsi2Mark);
+        if (!identity.Omsi2Mark.IsEmpty) DrawGlyph(cmds, identity.Omsi2Mark, omsi);
+        else
+        {
+            static double R(double v) => Math.Round(v, 2); // the menu's JSON rounds to two decimals; so do the shapes
+            double w = Math.Min(omsi.W, g.Length(64)), h = Math.Min(omsi.H, g.Length(32));
+            double x = R(omsi.X + omsi.W - w), y = R(omsi.Y + (omsi.H - h) / 2);
+            double cx = R(x + w / 2), cy = R(y + h / 2), r = R(h * 0.3), hub = R(r * 0.28);
+            var stroke = Hex.WithAlpha(line, 0xa0);
+            double sw = Math.Max(1, g.Length(1.5));
+            cmds.Add(new RectDraw(x, y, w, h, null, Hex.WithAlpha(line, 0x60), sw, g.Length(8)));
+            cmds.Add(new CircleDraw(cx, cy, r, null, stroke, sw));
+            cmds.Add(new CircleDraw(cx, cy, hub, stroke));
+            cmds.Add(new LineDraw(R(cx - r), cy, R(cx - hub), cy, stroke, sw));
+            cmds.Add(new LineDraw(R(cx + hub), cy, R(cx + r), cy, stroke, sw));
+            cmds.Add(new LineDraw(cx, R(cy + hub), cx, R(cy + r), stroke, sw));
+        }
+        if (!identity.OpenOmsiMark.IsEmpty) DrawGlyph(cmds, identity.OpenOmsiMark, g.ToCanvas(MenuGeometry.OpenOmsiMark));
     }
 
     private static void Header(PauseMenu menu, MenuGeometry g, List<MenuDraw> cmds, PauseIdentity identity, string accent, string line, Func<string, string> t)
     {
         var symbol = g.ToCanvas(MenuGeometry.Symbol);
-        if (!string.IsNullOrWhiteSpace(identity.SymbolId))
-            cmds.Add(new ImageDraw(identity.SymbolId, symbol.X, symbol.Y, symbol.W, symbol.H));
+        if (!identity.SymbolGlyph.IsEmpty)
+            DrawGlyph(cmds, identity.SymbolGlyph, symbol);
         else
         {
             // Neutral default symbol: an accent disc with a pause glyph.
@@ -66,7 +118,8 @@ internal static class MenuRenderer
         }
         string title = identity.TitleFor(menu.Language) ?? t(PauseStrings.Title);
         var (tx, ty) = g.ToCanvasPoint(88, 36);
-        cmds.Add(new TextDraw(tx, ty, title, 28 * g.Metrics.CanvasScale, TextRole.Bold, White, TextAlign.Left, TextBase.Middle, g.Length(700)));
+        cmds.Add(new TextDraw(tx, ty, title, 28 * g.Metrics.CanvasScale, TextRole.Bold, White, TextAlign.Left, TextBase.Middle, g.Length(530)));
+        Marks(g, cmds, identity, line);
         var (x1, y) = g.ToCanvasPoint(24, 72);
         var (x2, _) = g.ToCanvasPoint(880, 72);
         cmds.Add(new LineDraw(x1, y, x2, y, Hex.WithAlpha(line, 0x30), Math.Max(1, g.Length(1))));
@@ -114,7 +167,8 @@ internal static class MenuRenderer
             string? text = PauseIdentity.Pick(legend[i].Texts, menu.Language);
             if (text is null) continue;
             double y = panel.Y + g.Length(64 + i * 36);
-            cmds.Add(new RectDraw(panel.X + g.Length(20), y, g.Length(18), g.Length(18), Hex.Or(legend[i].Color, accent), null, 0, g.Length(4)));
+            if (legend[i].Icon is { IsEmpty: false } icon) DrawGlyph(cmds, icon, new MenuRect(panel.X + g.Length(18), y - g.Length(2), g.Length(22), g.Length(22)));
+            else cmds.Add(new RectDraw(panel.X + g.Length(20), y, g.Length(18), g.Length(18), Hex.Or(legend[i].Color, accent), null, 0, g.Length(4)));
             cmds.Add(new TextDraw(panel.X + g.Length(50), y + g.Length(9), text, 18 * cs, TextRole.Regular, White, TextAlign.Left, TextBase.Middle, panel.W - g.Length(70)));
         }
     }
@@ -138,6 +192,7 @@ internal static class MenuRenderer
             return;
         }
         cmds.Add(new ClipDraw(rect.X, rect.Y, rect.W, rect.H));
+        var modeIcons = menu.Identity.ModeIcons;
         int rows = MenuGeometry.LinesVisibleRows;
         for (int i = 0; i < rows && menu.ScrollRow + i < lines.Count; i++)
         {
@@ -149,8 +204,16 @@ internal static class MenuRenderer
             if (selected || hover)
                 cmds.Add(new RectDraw(row.X, row.Y, row.W, row.H, selected ? Hex.WithAlpha(accent, 0x40) : Cell, null, 0, g.Length(8)));
             cmds.Add(new RectDraw(row.X + g.Length(12), row.Y + (row.H - g.Length(16)) / 2, g.Length(16), g.Length(16), Hex.Or(entry.Color, accent), null, 0, g.Length(4)));
+            // With mode icons in the package the label column moves right, so rows with and without an icon line up.
+            double labelX = 40;
+            if (modeIcons.Count > 0)
+            {
+                labelX = 68;
+                if (entry.Mode is not null && modeIcons.TryGetValue(entry.Mode, out var modeIcon))
+                    DrawGlyph(cmds, modeIcon, new MenuRect(row.X + g.Length(36), row.Y + (row.H - g.Length(22)) / 2, g.Length(22), g.Length(22)));
+            }
             string label = string.IsNullOrWhiteSpace(entry.Label) ? "-" : entry.Label;
-            cmds.Add(new TextDraw(row.X + g.Length(40), row.Y + row.H / 2, label, 18 * cs, TextRole.Bold, White, TextAlign.Left, TextBase.Middle, g.Length(430)));
+            cmds.Add(new TextDraw(row.X + g.Length(labelX), row.Y + row.H / 2, label, 18 * cs, TextRole.Bold, White, TextAlign.Left, TextBase.Middle, g.Length(470 - labelX)));
             if (!string.IsNullOrWhiteSpace(entry.Detail))
                 cmds.Add(new TextDraw(row.X + row.W - g.Length(12), row.Y + row.H / 2, entry.Detail, 16 * cs, TextRole.Condensed, Muted, TextAlign.Right, TextBase.Middle, g.Length(280)));
         }

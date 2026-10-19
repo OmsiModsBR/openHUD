@@ -73,6 +73,9 @@ public sealed class MenuGeometry
     public static readonly MenuRect Panel = new(0, 0, MenuMetrics.DesignWidth, MenuMetrics.DesignHeight);
     public static readonly MenuRect Header = new(0, 0, 904, 72);
     public static readonly MenuRect Symbol = new(24, 12, 48, 48);
+    // The header's two brand marks, right-aligned (the OMSI 2 mark, then the openOMSI mark).
+    public static readonly MenuRect Omsi2Mark = new(632, 16, 120, 40);
+    public static readonly MenuRect OpenOmsiMark = new(760, 16, 120, 40);
     public static readonly MenuRect Content = new(24, 136, 856, 396);
     public static readonly MenuRect Footer = new(24, 548, 856, 36);
     public static readonly MenuRect LegendPanel = new(348, 136, 532, 396);

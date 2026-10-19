@@ -57,7 +57,7 @@ internal static class RealmapConverter
     public const int MaxMarkers = 400;
 
     public static FeatureSet Convert(RealmapView view, MapFrame frame, long id, MapRect window, DetailLevel detail,
-        Func<string, string?> imageIdOf, bool minorContours, double minExtent = 0, int budget = DefaultBudget)
+        Func<string, string?> imageIdOf, bool minorContours, double minExtent = 0, int budget = DefaultBudget, MapPalette? palette = null)
     {
         var features = new List<RadarFeature>(Math.Min(MaxFeatures, view.Areas.Count * 4 + view.Lines.Count + view.Streets.Count));
         var truncated = view.Truncated;
@@ -76,7 +76,7 @@ internal static class RealmapConverter
                     var (x, y) = frame.ToDisplay(t[i + 2 * k], t[i + 2 * k + 1]);
                     points[2 * k] = x; points[2 * k + 1] = y;
                 }
-                features.Add(new RadarFeature(layer, points, true));
+                features.Add(new RadarFeature(layer, points, true, palette?.Fill(area.Class)));
             }
         }
 
@@ -85,13 +85,16 @@ internal static class RealmapConverter
             if (line.Class == LineClass.Contour && !minorContours) continue;
             if (features.Count >= MaxFeatures) { truncated = true; break; }
             if (minExtent > 0 && Extent(line.Points, 0, line.Points.Length) < minExtent) continue;
-            features.Add(Line(line, frame));
+            var drawn = Line(line, frame, palette);
+            // A rail's edge colour is a wider line under it.
+            if (line.Class == LineClass.Rail && palette?.RailEdge is { } edge && features.Count < MaxFeatures) features.Add(new RadarFeature(RadarLayer.Road, drawn.Points, false, edge, 5.5));
+            features.Add(drawn);
         }
         foreach (var street in view.Streets)
         {
             if (features.Count >= MaxFeatures) { truncated = true; break; }
             if (minExtent > 0 && Extent(street.Points, 0, street.Points.Length) < minExtent) continue;
-            features.Add(Line(street, frame));
+            features.Add(Line(street, frame, palette));
         }
 
         var regions = new List<RadarRegion>();
@@ -163,7 +166,7 @@ internal static class RealmapConverter
         _ => RadarLayer.Green,
     };
 
-    private static RadarFeature Line(LineFeature line, MapFrame frame)
+    private static RadarFeature Line(LineFeature line, MapFrame frame, MapPalette? palette)
     {
         var points = new double[line.Points.Length - line.Points.Length % 2];
         for (var i = 0; i < points.Length; i += 2)
@@ -173,9 +176,9 @@ internal static class RealmapConverter
         }
         switch (line.Class)
         {
-            case LineClass.River: return new RadarFeature(RadarLayer.Water, points, false, null, line.Width > 0 ? line.Width : 8);
-            case LineClass.Rail: return new RadarFeature(RadarLayer.Road, points, false, "#7d8590", 3);
-            case LineClass.Border: return new RadarFeature(RadarLayer.Relief, points, false, "#c7cdd640", 2);
+            case LineClass.River: return new RadarFeature(RadarLayer.Water, points, false, palette?.River, line.Width > 0 ? line.Width : 8);
+            case LineClass.Rail: return new RadarFeature(RadarLayer.Road, points, false, palette?.Rail ?? "#7d8590", 3);
+            case LineClass.Border: return new RadarFeature(RadarLayer.Relief, points, false, palette?.Border ?? "#c7cdd640", 2);
             case LineClass.Contour: case LineClass.IndexContour: return new RadarFeature(RadarLayer.Relief, points);
             case LineClass.StreetWithLimits: return new RadarFeature(RadarLayer.Road, points, false, null, 8);
             default: return new RadarFeature(RadarLayer.Road, points, false, null, StreetWidth(line.StreetRank));

@@ -312,7 +312,7 @@ Uma entrada ruim é descartada sozinha e o resto do pacote permanece; a linha do
 | `layout = fancy` | `Dropped: identity.cfg:<line> layout: layout must be classic or openhud; default used` |
 | `title` duas vezes no arquivo | `Dropped: identity.cfg:<line>: duplicate key 'title' (the first one counts)` |
 | uma linha sem `=` | `Dropped: identity.cfg:<line>: not a key = value line` |
-| um SVG que começa com um `DOCTYPE` (só uma declaração XML e comentários podem vir antes de `<svg`) | `Dropped: identity.cfg:<line> stop_icon: no <svg> root element` |
+| um SVG que começa com um `DOCTYPE` (só uma declaração XML e comentários podem vir antes de `<svg`) | `Dropped: identity.cfg:<line> stop_icon: a DOCTYPE declaration is refused (it can define entities and load external files); remove the <!DOCTYPE ...> line` |
 | um PNG de 3000 x 10 pixels | `Dropped: identity.cfg:<line> symbol.green: PNG is 3000x10, the limit is 2048x2048` |
 | um arquivo chamado `.png` que não é um PNG | `Dropped: identity.cfg:<line> symbol.green: not a PNG (signature)` |
 | fontes sem `FONTS-LICENSE.txt` | `Dropped: fonts/: fonts/FONTS-LICENSE.txt is missing or empty; the system font is used` |

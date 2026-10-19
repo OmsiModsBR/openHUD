@@ -1,4 +1,6 @@
+using OpenHud.Art;
 using OpenHud.I18n;
+using OpenHud.Maps;
 using OpenHud.Packages;
 using OpenHud.Packages.PauseMenu;
 using OpenHud.Pause;
@@ -24,12 +26,24 @@ internal static class Look
         Route = Strings.Get("UI_MAP_ROUTE", language),
         You = Strings.Get("UI_MAP_YOU", language),
         More = Strings.Get("UI_MAP_MORE", language),
+        UnitKmh = Strings.Get("UI_UNIT_KMH", language),
+        UnitMph = Strings.Get("UI_UNIT_MPH", language),
+        UnitM = Strings.Get("UI_UNIT_M", language),
+        UnitKm = Strings.Get("UI_UNIT_KM", language),
+        UnitFt = Strings.Get("UI_UNIT_FT", language),
+        UnitMi = Strings.Get("UI_UNIT_MI", language),
     };
 
-    // The package's accent replaces the default one on the radar and the map; everything else stays.
-    public static RadarTheme Theme(PauseMenuIdentity? identity)
+    // The realmap manifest's colors replace the radar's land, water, green, built-up and contour colors; the pause-menu package's
+    // accent (also the route) and line color (the roads) replace theirs; everything else stays.
+    internal static RadarTheme Theme(PauseMenuIdentity? identity, MapPalette? palette = null)
     {
         var theme = new RadarTheme();
+        if (palette?.Land is { } land) theme = theme with { Backdrop = land };
+        if (palette?.Water is { } water) theme = theme with { Water = water };
+        if (palette?.Green is { } green) theme = theme with { Green = green };
+        if (palette?.Built is { } built) theme = theme with { Built = built };
+        if (palette?.Contour is { } contour) theme = theme with { Relief = contour };
         if (identity?.AccentColor is { } accent)
         {
             var hex = new HudColor(accent.R, accent.G, accent.B).ToHex();
@@ -55,8 +69,9 @@ internal static class Look
 
     // PauseMenuIdentity (what the package says) -> PauseIdentity (what the menu draws). `code` is OMSI's
     // three-letter language code the package's suffixed keys use.
-    public static PauseIdentity Identity(PauseMenuIdentity package, string code, UiLanguage language, string? symbolImageId)
+    internal static PauseIdentity Identity(PauseMenuIdentity package, string code, UiLanguage language, string? symbolImageId, PauseGlyphs? glyphs = null)
     {
+        glyphs ??= PauseGlyphs.Empty;
         var accent = package.AccentColor is { } a ? new HudColor(a.R, a.G, a.B).ToHex() : PauseIdentity.DefaultAccent;
         var line = package.LineColor is { } l ? new HudColor(l.R, l.G, l.B).ToHex() : PauseIdentity.DefaultLine;
         var titles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -82,8 +97,14 @@ internal static class Look
             var texts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [code] = text };
             texts["en"] = package.Legend(kind, "ENG") ?? (builtIn ? Strings.Get("UI_LEGEND_" + kind.ToUpperInvariant(), UiLanguage.English) : text);
             var color = package.GroupColors.TryGetValue(kind, out var group) ? new HudColor(group.R, group.G, group.B).ToHex() : accent;
-            legend.Add(new LegendEntry(texts, color));
+            // The package's icon of the marker kind replaces the color swatch; the stop kind falls back to the stop icon.
+            var icon = glyphs.MarkerIcons.TryGetValue(kind, out var markerIcon) ? markerIcon : kind == "stop" && !glyphs.StopIcon.IsEmpty ? glyphs.StopIcon : null;
+            legend.Add(new LegendEntry(texts, color, icon));
         }
-        return new PauseIdentity { Titles = titles, SymbolId = symbolImageId ?? "", Accent = accent, Line = line, Legend = legend };
+        return new PauseIdentity
+        {
+            Titles = titles, SymbolId = symbolImageId ?? "", Symbol = glyphs.Symbol, Omsi2Mark = glyphs.Omsi2Mark, OpenOmsiMark = glyphs.OpenOmsiMark,
+            ModeIcons = glyphs.ModeIcons, Credit = package.Credit, Accent = accent, Line = line, Legend = legend,
+        };
     }
 }

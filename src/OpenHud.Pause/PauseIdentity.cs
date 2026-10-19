@@ -1,7 +1,7 @@
 namespace OpenHud.Pause;
 
-// One legend row of the menu: a color swatch and a text per language.
-public sealed record LegendEntry(IReadOnlyDictionary<string, string> Texts, string Color);
+// One legend row of the menu: a color swatch (or the package's icon of the marker kind) and a text per language.
+public sealed record LegendEntry(IReadOnlyDictionary<string, string> Texts, string Color, OpenHud.Art.Glyph? Icon = null);
 
 // What makes the menu "belong" to a map: a title per language, a symbol (an
 // image id the integrator registered), two colors and legend texts. All of it is
@@ -14,11 +14,24 @@ public sealed record PauseIdentity
 
     public IReadOnlyDictionary<string, string> Titles { get; init; } = new Dictionary<string, string>();
     public string SymbolId { get; init; } = "";
+    // The map's symbol as a picture or vector art; when empty, SymbolId (a registered image) stands in.
+    public OpenHud.Art.Glyph Symbol { get; init; } = OpenHud.Art.Glyph.None;
+    // The OMSI 2 mark and the openOMSI mark of the header; empty = the menu draws its generic marks.
+    public OpenHud.Art.Glyph Omsi2Mark { get; init; } = OpenHud.Art.Glyph.None;
+    public OpenHud.Art.Glyph OpenOmsiMark { get; init; } = OpenHud.Art.Glyph.None;
+    // Icons by transit mode ("bus", "tram", "metro", "rail") for the lines list.
+    public IReadOnlyDictionary<string, OpenHud.Art.Glyph> ModeIcons { get; init; } = new Dictionary<string, OpenHud.Art.Glyph>();
+    // The package's credit line, shown in the footer next to the versions.
+    public string? Credit { get; init; }
     public string Accent { get; init; } = DefaultAccent;
     public string Line { get; init; } = DefaultLine;
     public IReadOnlyList<LegendEntry> Legend { get; init; } = Array.Empty<LegendEntry>();
 
     public static readonly PauseIdentity Generic = new();
+
+    // The symbol to draw: the glyph, else the registered image id (aspect unknown, drawn to fill its square slot).
+    public OpenHud.Art.Glyph SymbolGlyph =>
+        !Symbol.IsEmpty ? Symbol : !string.IsNullOrWhiteSpace(SymbolId) ? OpenHud.Art.Glyph.Picture(SymbolId, 1, 1) : OpenHud.Art.Glyph.None;
 
     // The title for a language tag such as "pt-BR": exact tag, then its
     // primary subtag, then "en", then any entry; null when there is none.

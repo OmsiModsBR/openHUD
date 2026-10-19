@@ -1,5 +1,6 @@
 using System.Globalization;
 using OpenHud.Model;
+using OpenHud.Packages.Realmap;
 using OpenHud.Pause;
 using OpenHud.Radar;
 
@@ -19,10 +20,13 @@ internal static class RadarModels
         return player;
     }
 
-    public static RadarModel Build(FrameSnapshot frame, VehicleState player, MapFrame mapFrame, FeatureSet? features, IReadOnlyList<RadarLine>? lines)
+    // `style` is the realmap manifest's player marker; `speed` the text for the strip (null = none). The manifest's line colors
+    // (player_line, player_brt) need the player's active line, which the catalog does not give; only player_free applies.
+    public static RadarModel Build(FrameSnapshot frame, VehicleState player, MapFrame mapFrame, FeatureSet? features, IReadOnlyList<RadarLine>? lines,
+        PlayerMarkerStyle? style = null, string? speed = null)
     {
         var (px, py) = mapFrame.ToDisplay(player.WorldX, player.WorldY);
-        var radarPlayer = new RadarPlayer(px, py, mapFrame.Heading(player.HeadingDegrees ?? 0));
+        var radarPlayer = new RadarPlayer(px, py, mapFrame.Heading(player.HeadingDegrees ?? 0), style?.Free?.ToHex(), style?.Triangle ?? false);
 
         var list = new List<RadarVehicle>();
         if (frame.Vehicles.Value is { } nearby)
@@ -39,24 +43,32 @@ internal static class RadarModels
         if (frame.Time.Value is { } time) clock = time.Hour.ToString("00", CultureInfo.InvariantCulture) + ":" + time.Minute.ToString("00", CultureInfo.InvariantCulture);
 
         return new RadarModel(radarPlayer, features?.Features, features?.Regions, features?.Markers, list, null,
-            clock is null ? null : new RadarInfo(null, clock, null), lines);
+            clock is null && speed is null ? null : new RadarInfo(null, clock, null, speed), lines);
     }
 
-    // Cheap fingerprint of what the radar would show, to skip the build when nothing visible changed:
-    // positions to a quarter metre, headings to a degree, the clock to the minute, plus the map data and the view.
-    public static long Signature(FrameSnapshot frame, VehicleState player, long featureId, int zoomStep, int stamp)
+    // Cheap fingerprint of what the radar would show, to skip the build when nothing visible changed. Positions are taken
+    // at a third of a pixel of the radar's scale (the build would move nothing the eye can see for less), headings to a
+    // degree, the clock to the minute and the speed to the whole number the strip shows; plus the map data and the view.
+    // `metresPerPixel` is the radar's current scale (0 = the fine default of a quarter metre).
+    public static long Signature(FrameSnapshot frame, VehicleState player, long featureId, int zoomStep, int stamp, double metresPerPixel = 0, int speedValue = 0)
     {
+        var step = metresPerPixel > 0 && double.IsFinite(metresPerPixel) ? Math.Clamp(metresPerPixel / 3, 0.05, 20) : 0.25;
         var h = new HashCode();
-        h.Add(Q(player.WorldX, 4)); h.Add(Q(player.WorldY, 4)); h.Add(Q(player.HeadingDegrees ?? 0, 1));
+        h.Add(Q(player.WorldX, 1 / step)); h.Add(Q(player.WorldY, 1 / step)); h.Add(Q(player.HeadingDegrees ?? 0, 1));
         if (frame.Vehicles.Value is { } nearby)
         {
             h.Add(nearby.Vehicles.Count);
-            foreach (var v in nearby.Vehicles) { h.Add(Q(v.WorldX, 2)); h.Add(Q(v.WorldY, 2)); h.Add(Q(v.HeadingDegrees ?? 0, 0.2)); }
+            foreach (var v in nearby.Vehicles) { h.Add(Q(v.WorldX, 1 / (step * 2))); h.Add(Q(v.WorldY, 1 / (step * 2))); h.Add(Q(v.HeadingDegrees ?? 0, 0.2)); }
         }
         if (frame.Time.Value is { } t) { h.Add(t.Hour); h.Add(t.Minute); }
-        h.Add(featureId); h.Add(zoomStep); h.Add(stamp);
+        h.Add(featureId); h.Add(zoomStep); h.Add(stamp); h.Add(speedValue);
         return h.ToHashCode();
     }
+
+    private static string ModeName(TransitKind kind) => kind switch
+    {
+        TransitKind.Tram => "tram", TransitKind.Metro => "metro", TransitKind.Rail => "rail", _ => "bus",
+    };
 
     private static long Q(double value, double perUnit) => (long)Math.Round(value * perUnit);
 
@@ -72,9 +84,13 @@ internal static class RadarModels
         {
             if (radar.Count >= 200) break;
             if (!seen.Add(line.Number + "|" + line.Name)) continue;
-            var color = map.PauseMenu.Identity.GroupColors.TryGetValue(line.Group, out var group) ? group.ToHex() : accent;
+            // A line the manifest lists as BRT takes the package's BRT color; else its group's color; else the accent.
+            var identity = map.PauseMenu.Identity;
+            var brtLines = map.Realmap.Manifest?.Player.BrtLines ?? default;
+            var isBrt = !brtLines.IsDefaultOrEmpty && brtLines.Any(b => string.Equals(b, line.Number, StringComparison.OrdinalIgnoreCase));
+            var color = isBrt && identity.BrtColor is { } brt ? brt.ToHex() : identity.GroupColors.TryGetValue(line.Group, out var group) ? group.ToHex() : accent;
             radar.Add(new RadarLine(line.Number + " " + line.Name, color));
-            menu.Add(new LineEntry(line.Number, color, line.Name));
+            menu.Add(new LineEntry(line.Number, color, line.Name, ModeName(line.Kind)));
         }
         return (radar, menu);
     }

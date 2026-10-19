@@ -31,6 +31,11 @@ public sealed class FrameSource
 {
     private static readonly Regex HandlePattern = new(@"^rv-\d{1,9}$", RegexOptions.CultureInvariant);
     private const int MaxTileRows = 4096;
+
+    // The factor that turns the catalog's `ground_speed` into metres per second. INFERRED, not confirmed: the game keeps
+    // its speed in metres per second, so the factor is 1. If the runtime round shows another unit (km/h would be 1/3.6),
+    // this is the one place to change; the speed on the radar's strip and VehicleState.SpeedKmh follow from it.
+    public const double GroundSpeedToMetresPerSecond = 1.0;
     // While the player's tile is unknown the table is re-read this often (not every frame: the call may be unsupported).
     private const int UnresolvedRetryFrames = 10;
 
@@ -240,8 +245,8 @@ public sealed class FrameSource
         if (rx is not null && ry is not null && rz is not null && rw is not null) heading = Angles.HeadingFromQuaternion(rx.Value, ry.Value, rz.Value, rw.Value);
         var handle = handleOverride ?? f.Text("handle", 32);
         if (handle is not null && !HandlePattern.IsMatch(handle)) handle = null;
-        // ground_speed is read as metres per second (the unit the game keeps it in); negative when reversing.
-        var speed = f.Double("ground_speed", -1000, 1000) ?? 0;
+        // ground_speed is read as metres per second (see GroundSpeedToMetresPerSecond); negative when reversing.
+        var speed = (f.Double("ground_speed", -1000, 1000) ?? 0) * GroundSpeedToMetresPerSecond;
         return new VehicleState(handle, tile, x.Value, y.Value, z, wx, wy, resolved, heading, speed, f.Int("traffic_type", 0, 255), f.Bool("ai_enabled"));
     }
 

@@ -116,6 +116,16 @@ internal static class Expect
         if (!condition) throw new InvalidOperationException(what);
     }
 
+    public static void False(bool condition, string what)
+    {
+        if (condition) throw new InvalidOperationException(what);
+    }
+
+    public static void Contains(string needle, string haystack, string what)
+    {
+        if (!haystack.Contains(needle, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException($"{what}: '{haystack}' does not mention '{needle}'");
+    }
+
     public static void Throws<TException>(Action action, string what) where TException : Exception
     {
         try { action(); }

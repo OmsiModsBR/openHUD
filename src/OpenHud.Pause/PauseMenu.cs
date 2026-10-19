@@ -12,7 +12,7 @@ public sealed record MapRecentered : MenuEvent;
 public sealed record LineActivated(int Index) : MenuEvent;
 
 // A row of the lines page; the integrator supplies them from the radar data.
-public sealed record LineEntry(string Label, string Color, string Detail = "");
+public sealed record LineEntry(string Label, string Color, string Detail = "", string? Mode = null);
 
 // The model of the menu: pages, focus, hover/press state, scrolling, and the
 // keyboard and mouse rules. It holds no game state and does not know the state
@@ -58,6 +58,8 @@ public sealed class PauseMenu
     public int ScrollRow { get; private set; }
     public int SelectedLine { get; private set; } = -1;
     public IReadOnlyList<LineEntry> Lines => lines;
+    // "openHUD 0.1.0 · OMSI 2.3.004": the footer's version text, set by the integrator (null = none shown).
+    public string? FooterVersions { get; private set; }
     // Increases whenever something visible changed; the machine republishes the scene on a change.
     public long Revision { get; private set; }
 
@@ -74,6 +76,14 @@ public sealed class PauseMenu
     }
 
     public void SetIdentity(PauseIdentity? identity) { Identity = identity ?? PauseIdentity.Generic; Touch(); }
+
+    public void SetFooterVersions(string? text)
+    {
+        var clean = string.IsNullOrWhiteSpace(text) ? null : text;
+        if (clean == FooterVersions) return;
+        FooterVersions = clean;
+        Touch();
+    }
 
     public void SetLanguage(string language) { Language = language ?? ""; Touch(); }
 

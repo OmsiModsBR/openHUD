@@ -29,6 +29,9 @@ public sealed record ClipDraw(double X, double Y, double W, double H) : MenuDraw
 
 public sealed record UnclipDraw : MenuDraw;
 
+// A scene command the menu draws as it is: the primitives of a vector symbol (poly, clip, ...) that have no record of their own.
+public sealed record RawDraw(OpenHud.Scene.SceneCommand Command) : MenuDraw;
+
 public readonly record struct MenuRect(double X, double Y, double W, double H)
 {
     public bool Contains(double px, double py) => px >= X && px < X + W && py >= Y && py < Y + H;
@@ -109,6 +112,11 @@ public static class MenuSceneJson
 
     private static void Write(Utf8JsonWriter w, MenuDraw cmd)
     {
+        if (cmd is RawDraw raw)
+        {
+            w.WriteRawValue(OpenHud.Scene.SceneJson.EncodeCommand(raw.Command));
+            return;
+        }
         w.WriteStartObject();
         switch (cmd)
         {

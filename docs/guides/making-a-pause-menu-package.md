@@ -286,7 +286,7 @@ A bad entry is dropped on its own and the rest of the package stays; the log lin
 | `layout = fancy` | `Dropped: identity.cfg:<line> layout: layout must be classic or openhud; default used` |
 | `title` twice in the file | `Dropped: identity.cfg:<line>: duplicate key 'title' (the first one counts)` |
 | a line without `=` | `Dropped: identity.cfg:<line>: not a key = value line` |
-| an SVG that starts with a `DOCTYPE` (only an XML declaration and comments may come before `<svg`) | `Dropped: identity.cfg:<line> stop_icon: no <svg> root element` |
+| an SVG that starts with a `DOCTYPE` (only an XML declaration and comments may come before `<svg`) | `Dropped: identity.cfg:<line> stop_icon: a DOCTYPE declaration is refused (it can define entities and load external files); remove the <!DOCTYPE ...> line` |
 | a PNG of 3000 x 10 pixels | `Dropped: identity.cfg:<line> symbol.green: PNG is 3000x10, the limit is 2048x2048` |
 | a file named `.png` that is not a PNG | `Dropped: identity.cfg:<line> symbol.green: not a PNG (signature)` |
 | fonts without `FONTS-LICENSE.txt` | `Dropped: fonts/: fonts/FONTS-LICENSE.txt is missing or empty; the system font is used` |

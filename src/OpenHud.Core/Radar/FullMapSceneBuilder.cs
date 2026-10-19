@@ -14,13 +14,15 @@ public sealed class FullMapSceneBuilder
     private readonly RadarTheme theme;
     private readonly RadarTexts texts;
     private readonly ITextMeasurer measurer;
+    private readonly RadarArt art;
 
-    public FullMapSceneBuilder(RadarTheme? theme = null, RadarTexts? texts = null, ITextMeasurer? measurer = null)
+    public FullMapSceneBuilder(RadarTheme? theme = null, RadarTexts? texts = null, ITextMeasurer? measurer = null, RadarArt? art = null)
     {
         this.theme = theme ?? new RadarTheme();
         this.theme.Validate();
         this.texts = texts ?? new RadarTexts();
         this.measurer = measurer ?? new ApproximateTextMeasurer();
+        this.art = art ?? RadarArt.None;
     }
 
     private const int FixedReserve = 140 + 100 + 40 + 48;
@@ -52,7 +54,8 @@ public sealed class FullMapSceneBuilder
         int maxVehicles = Math.Clamp(options.MaxVehicles, 0, 1000);
         int maxMarkers = Math.Clamp(options.MaxMarkers, 0, 1000);
         int maxCommands = Math.Clamp(options.MaxCommands, 256, SceneLimits.MaxCommands - 128);
-        var budget = new MapBudget(maxCommands - FixedReserve - maxVehicles - maxMarkers, Math.Clamp(options.MaxPoints, 0, 80000));
+        int artExtra = art.StopIcon.IsEmpty ? 0 : maxMarkers / 2 * Math.Max(0, art.StopIcon.CommandCount - 1);
+        var budget = new MapBudget(Math.Max(0, maxCommands - FixedReserve - maxVehicles - maxMarkers - artExtra), Math.Clamp(options.MaxPoints, 0, 80000));
 
         var view = new MapView(fx, fy, mx + mw / 2, my + mh / 2, 1 / mpp, 0, mx + 1, my + 1, mx + mw - 1, my + mh - 1);
         bool Visible(double x, double y) => view.Inside(x, y);
@@ -68,19 +71,19 @@ public sealed class FullMapSceneBuilder
         map.DrawFeatures(b, model.Features, view, budget);
         DrawRegions(b, model.Regions, view, Visible, 40, 16);
         map.DrawRoute(b, model.Route, view, 5, 24);
-        map.DrawMarkers(b, model.Markers, view, maxMarkers, Visible);
+        map.DrawMarkers(b, model.Markers, view, maxMarkers, Visible, art);
         map.DrawVehicles(b, model.Vehicles, view, maxVehicles, Visible);
         var player = model.Player ?? new RadarPlayer(0, 0, 0);
         if (view.Project(player.X, player.Y, out double sx, out double sy) && view.Inside(sx, sy))
         {
             var local = new MapView(player.X, player.Y, sx, sy, view.Scale, 0, view.Left, view.Top, view.Right, view.Bottom);
-            map.DrawPlayer(b, local, new RadarPlayer(player.X, player.Y, Finite(player.HeadingDegrees, 0)), 13);
+            map.DrawPlayer(b, local, new RadarPlayer(player.X, player.Y, Finite(player.HeadingDegrees, 0), player.Color, player.Triangle), 13);
         }
         b.Unclip();
         b.Rect(mx, my, mw, mh, null, theme.Border, 2, 12);
 
         DrawNorthMark(b, mx + 28, my + 30);
-        DrawScaleBar(b, mx + 16, my + mh - 40, mpp);
+        DrawScaleBar(b, mx + 16, my + mh - 40, mpp, options.Units);
 
         if (side >= 120) DrawSidePanel(b, mx + mw + m, my, side, mh, model);
         return b.Build();
@@ -95,22 +98,16 @@ public sealed class FullMapSceneBuilder
         b.Text(x, y + 6, Clip(texts.North, 3) ?? "N", 12, "bold", theme.Text, "c", "mid");
     }
 
-    private void DrawScaleBar(SceneBuilder b, double x, double y, double mpp)
+    private void DrawScaleBar(SceneBuilder b, double x, double y, double mpp, OpenHud.Settings.UnitSystem units)
     {
-        // The largest 1/2/5 x 10^k length that fits in 160 px.
-        double length = 1;
-        double best = 0;
-        for (double decade = 1; decade <= 1e6; decade *= 10)
-            foreach (double step in new[] { 1.0, 2.0, 5.0 })
-            {
-                double candidate = step * decade;
-                if (candidate / mpp <= 160) best = candidate;
-            }
-        if (best > 0) length = best;
+        // The largest 1/2/5 x 10^k length (of the unit system) that fits in 160 px.
+        var steps = UnitFormat.ScaleSteps(units, texts);
+        var chosen = steps[0];
+        foreach (var step in steps)
+            if (step.Metres / mpp <= 160) chosen = step;
+        double length = chosen.Metres;
         double px = Math.Round(length / mpp, 1);
-        string label = length >= 1000
-            ? (length / 1000).ToString("0.##", CultureInfo.InvariantCulture) + " km"
-            : length.ToString("0", CultureInfo.InvariantCulture) + " m";
+        string label = chosen.Label;
         b.Rect(x - 8, y - 8, px + 16 + 54, 30, SceneColor.WithAlpha(theme.Backdrop, 0.85), null, null, 8);
         b.Line(x, y + 14, x + px, y + 14, theme.Text, 2);
         b.Line(x, y + 8, x, y + 14, theme.Text, 2);

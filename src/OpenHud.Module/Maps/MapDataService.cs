@@ -20,6 +20,7 @@ internal sealed class MapDataService
     private readonly RealmapPackage package;
     private readonly MapFrame frame;
     private readonly Func<string, string?> imageIdOf;
+    private readonly MapPalette? palette;
     private readonly object gate = new();
     private readonly SemaphoreSlim signal = new(0, int.MaxValue);
     private readonly Request?[] pending = new Request?[2];
@@ -28,11 +29,12 @@ internal sealed class MapDataService
     private long processed;
     private long failures;
 
-    public MapDataService(RealmapPackage package, MapFrame frame, Func<string, string?> imageIdOf)
+    public MapDataService(RealmapPackage package, MapFrame frame, Func<string, string?> imageIdOf, MapPalette? palette = null)
     {
         this.package = package;
         this.frame = frame;
         this.imageIdOf = imageIdOf;
+        this.palette = palette;
     }
 
     public MapFrame Frame => frame;
@@ -75,7 +77,7 @@ internal sealed class MapDataService
             try
             {
                 var view = package.Query(request.Window, request.Detail);
-                Volatile.Write(ref results[(int)kind], RealmapConverter.Convert(view, frame, request.Id, request.Window, request.Detail, imageIdOf, request.MinorContours, request.MinExtent, kind == MapQuery.Radar ? RadarBudget : FullMapBudget));
+                Volatile.Write(ref results[(int)kind], RealmapConverter.Convert(view, frame, request.Id, request.Window, request.Detail, imageIdOf, request.MinorContours, request.MinExtent, kind == MapQuery.Radar ? RadarBudget : FullMapBudget, palette));
                 served++;
             }
             catch (Exception)
